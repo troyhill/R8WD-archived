@@ -3,7 +3,7 @@
 
 
 ### install and load any needed packages
-pkgs <- c('dataRetrieval', 'ggplot2', 'plyr', 'remotes')
+pkgs <- c('dataRetrieval', 'ggplot2', 'plyr', 'remotes', 'tidyverse')
 if (!all(pkgs %in% installed.packages())) { install.packages(pkgs[which(!pkgs %in% installed.packages())])}
 # remotes::install_github('troyhill/R8WD') # install/update R8WD
 
