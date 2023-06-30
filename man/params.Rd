@@ -5,7 +5,7 @@
 \alias{params}
 \title{Data: Core parameters}
 \format{
-A dataframe with Water Quality Portal characteristic names for core water quality parameters, allowing re-naming of duplicated parameters (e.g., `Dissolved oxygen (DO)`, `Dissolved Oxygen***retired***use Dissolved oxygen (DO)`).
+A dataframe with Water Quality Portal characteristic names for core water quality parameters, allowing re-naming of duplicated parameters.
 \itemize{
   \item params WQP characteristic names
   \item new_param pooled parameter categories
