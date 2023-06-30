@@ -96,7 +96,7 @@ summarizeQC <- function(data) {
                                n          = sum(!is.na(ResultMeasureValue)),
                                blank.mean = mean(ResultMeasureValue, na.rm = TRUE),
                                blank.sd   = sd(ResultMeasureValue, na.rm = TRUE),
-                               exceedences= sum(exceedMDL)
+                               exceedances= sum(exceedMDL)
   )
   # blank.summary$loc <- paste0(OrganizationIdentifier, '__', MonitoringLocationIdentifier)
 
