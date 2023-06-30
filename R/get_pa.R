@@ -9,9 +9,11 @@
 #'
 #' @return dataframe
 #' @export
-#'
+#' @importFrom httr GET
+
+
 get_pa <- function(
-    api_key = API_key,
+    api_key,
     start_date = as.POSIXct('2023-05-01', format = '%Y-%m-%d'), # posixct or malleable by as.posixct. will be converted to unix timestamp in seconds since Jan 1, 1970
     end_date = as.POSIXct(Sys.time()),
     sensor = 2478,
@@ -19,7 +21,7 @@ get_pa <- function(
     parameters = c('humidity', # https://api.purpleair.com/ sensor data fields table: Relative humidity inside of the sensor housing (%). On average, this is 4% lower than ambient conditions. Null if not equipped.
                    'temperature', # Temperature inside of the sensor housing (F). On average, this is 8F higher than ambient conditions. Null if not equipped.
                    'pressure', # Current pressure in Millibars.
-                   #'pm2.5_atm', # three ways of converting plantower signal to ug/m3. This is ATM variant
+                   # 'pm2.5_atm', # three ways of converting plantower signal to ug/m3. This is ATM variant
                    'pm2.5_atm_a',
                    'pm2.5_atm_b'#,
                    # 'pm2.5_alt', # ALT variant, described at https://api.purpleair.com/
