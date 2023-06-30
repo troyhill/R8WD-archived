@@ -5,7 +5,7 @@
 \title{Get Purple Air data from Purple Air API (based on https://api.purpleair.com/)}
 \usage{
 get_pa(
-  api_key = API_key,
+  api_key,
   start_date = as.POSIXct("2023-05-01", format = "\%Y-\%m-\%d"),
   end_date = as.POSIXct(Sys.time()),
   sensor = 2478,
