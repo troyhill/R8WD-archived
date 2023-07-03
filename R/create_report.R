@@ -5,15 +5,37 @@
 #' @param org organization (short name in WQP) whose data should be used to build the report
 #' @param extFile name of report-generating script, located in the inst/extdata folder of the R8WD R package
 #'
-#' @return Quarto report
+#' @return Quarto markdown document
 #' @export
 #' @examples
 #' create_report(org = 'Tribe 1')
 #' create_report(org = 'Tribe 2')
 #'
-create_report <- function(org = 'CHEYRIVR',
-                            extFile = 'script_hello_worldv3.R') {
-  assign("args1", org, envir = .GlobalEnv)# <<- org # assign as global variable
+create_report <- function(org = 'TURTLEMT',
+                            extFile = 'script_generateReport.qmd') {
+  targetFile <- system.file('extdata', extFile, package = 'R8WD')
+  newFile    <- tempfile('wqp_report', fileext = '.qmd')
+  token      <- 'REPLACE_THIS_TEXT'
+  ### test for presence
+  # grep(token, readLines(targetFile), value = TRUE)
+  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org)
+
+  fileConn   <- file(newFile)
+  writeLines(newText, fileConn)
+  close(fileConn)
+
+  utils::browseURL(newFile)
+
+  # assign("args1", org, envir = .GlobalEnv)# <<- org # assign as global variable
+  # fil <- tempfile('deleteMe', fileext = '.rds')
+  # saveRDS(object = args1, file = fil, compress = FALSE)
   # print(args1)
-  source(system.file('extdata', extFile, package = 'R8WD'))
+  # source(system.file('extdata', extFile, package = 'R8WD'))
+  # quarto::quarto_render(input = system.file('extdata', extFile, package = 'R8WD'))
+  ### inconsistent quarto rendering error.
+  # list.files('C://Program Files//RStudio//bin//quarto//bin//')
+  # quarto_location <- 'C://Program Files//RStudio//bin//quarto//bin//quarto.cmd'
+  # if (file.exists(quarto_location)) {
+  #   Sys.setenv(QUARTO_PATH="/home/roger/quarto-cli/package/dist/bin/quarto")
+  # }
 }
