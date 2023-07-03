@@ -26,7 +26,7 @@ library(gt)
 library(dataRetrieval)
 library(R8WD)
 
-Tribal_org <- 'TURTLEMT'
+Tribal_org <- c("UTEMTN")
 ```
 
 ```{r}
@@ -78,27 +78,39 @@ Summary of blank performance by year:
 #| fig-cap: Table 1. Blank performance for each analyte in each year, based on data input into the Water Quality Portal.
 ### https://gt.albert-rapp.de/getting_started.html
 ### create cleaner sample type 
-allSummary$blank_summary$`Sample Type` <- sapply(strsplit(allSummary$blank_summary$ActivityTypeCode, '-'), FUN = '[[', 2)
+if (nrow(allSummary$blank_proc) == 0) {
+  blank_table <- data.frame('Blanks collected' = c(0))
+} else {
+  allSummary$blank_summary$`Sample Type` <- sapply(strsplit(allSummary$blank_summary$ActivityTypeCode, '-'), FUN = '[[', 2)
 allSummary$blank_summary$`Exceedances (%)` <- paste0(round(allSummary$blank_summary$exceedances / allSummary$blank_summary$n, 3)*100, '%')
 allSummary$blank_summary[, 5] <- round(allSummary$blank_summary[, 5], 3)
 names(allSummary$blank_summary)[c(3, 5:7, 9)] <- c('Analyte', 'Year', 'Blanks', 'Mean value', 'Exceedances (>MDL)')
 blank_table <- allSummary$blank_summary[, c(10, 3, 5:7, 9, 11)]
 blank_table$`Mean value` <- sprintf("%.3f", round(blank_table$`Mean value`,3)) # keep trailing zeros
+
+allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
+
+
+}
 gt(blank_table)
+
 ```
 
 
 ```{r}
 #| echo: false
-#| fig-cap: Figure 1. Field blank performance for each analyte over time. Red lines indicate detection limits for each analyte during each sampling event.
-allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
-
+#| warning: false
+#| fig-cap: Figure 1. Field blank performance for each analyte over time (black). Red points indicate detection limits for each analyte during each sampling event.
+if (nrow(allSummary$blank_proc) == 0) {
+ ggplot()
+} else {
 ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
   geom_line(linetype = 2) + geom_point() + 
   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
   geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linetype = 1) +
+  geom_point(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', size = 0.5) +
   labs(y = 'Blank value', x = '')
-
+}
 ```
 
 
@@ -111,15 +123,26 @@ if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN
   sonde_parameters <- c(sonde_parameters, 'TN')
 }
 
-number_of_lab_blanks <- ifelse(grepl(x = names(tmp), pattern = 'Lab'), sum(tmp[grepl(x = names(tmp), pattern = 'Lab')]), 0)
-number_of_field_blanks <- ifelse(grepl(x = names(tmp), pattern = 'Field'), sum(tmp[grepl(x = names(tmp), pattern = 'Field')]), 0)
+number_of_lab_blanks <- ifelse(any(grepl(x = names(tmp), pattern = 'Lab')), sum(tmp[grepl(x = names(tmp), pattern = 'Lab')]), 0)
+number_of_field_blanks <- ifelse(any(grepl(x = names(tmp), pattern = 'Field')), sum(tmp[grepl(x = names(tmp), pattern = 'Field')]), 0)
 no_years <- suppressWarnings(length(unique(na.omit(format(allSummary$data$ActivityStartDate, '%Y')))))
 ### number of samples, excluding sonde data
 no_samples <- sum(!is.na(allSummary$data$ResultMeasureValue[!(allSummary$data$CharacteristicName %in% sonde_parameters)]))
 
-number_field_blank_detects <- sum(allSummary$blank_summary[, 9][grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
 
-percent_field_blank_detects <- round(sum(allSummary$blank_summary[, 9][grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$Blanks[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
+### correct for cases where no blank data are reported
+if (length(number_of_lab_blanks) == 0)   number_of_lab_blanks   <- 0
+if (length(number_of_field_blanks) == 0) number_of_field_blanks <- 0 
+if (nrow(allSummary$blank_summary) == 0)  {
+  number_field_blank_detects  <- NA
+  percent_field_blank_detects <- NA
+} else {
+  number_field_blank_detects <- sum(allSummary$blank_summary[, 9][grep(x =   allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
+  
+  percent_field_blank_detects <- round(sum(allSummary$blank_summary[, 9][grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$Blanks[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
+  }
+
+
 
 ### identify parameters without QC data (exclude sonde measurements)
 parameters_without_blanks <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$blank_summary$Analyte), sonde_parameters))]
@@ -165,7 +188,7 @@ rep_totals_by_param <- data.frame(table(allSummary$rep_proc$CharacteristicName))
 rep_totals_by_param$label_text <- as.character(rep_totals_by_param$Freq)
 rep_totals_by_param$label_text[1] <- paste0('n = ', rep_totals_by_param$Freq[1])
 
-label_location <- as.numeric(quantile(x = allSummary$rep_proc$RPD, 0.95))
+label_location <- as.numeric(quantile(x = allSummary$rep_proc$RPD, probs = 0.95, na.rm = TRUE))
 
 ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = CharacteristicName, y = RPD)) +
   geom_boxplot(outlier.shape = NA) + theme_bw() + #  theme(axis.text.x=element_blank())
@@ -190,9 +213,9 @@ samples_for_rep_comparison <- sum(!is.na(allSummary$data$ResultMeasureValue[allS
 ### Replicate sets above 20% variation, by parameter
 ### can split this into field vs. lab in future if orgs report lab reps
 above20_by_param <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), plyr::summarize,
-      `No. replicate sets`       = length(RPD),
-      `No. replicates above 20%` = sum(RPD > 20),
-      `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20) / length(RPD))), '%')
+      `No. replicate sets`       = sum(!is.na(RPD)),
+      `No. replicates above 20%` = sum(RPD > 20, na.rm = TRUE),
+      `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
       )
 names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
@@ -229,7 +252,7 @@ median_vals <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), plyr::s
 highest_variation_params <- median_vals[order(median_vals$medianRPD, decreasing = TRUE), ][1:3, ]
 median_variation_above20 <- median_vals$CharacteristicName[median_vals$medianRPD > 20]
 
-total_reps_above20      <- sum(allSummary$rep_proc$RPD > 20)
+total_reps_above20      <- sum(allSummary$rep_proc$RPD > 20, na.rm = TRUE)
 reps_pct_above20        <- round(total_reps_above20 / sum(!is.na(allSummary$rep_proc$RPD)) * 100)
 summary_reps_above20    <- paste0(total_reps_above20, ' sets of replicates (', reps_pct_above20, '% of the total) had ', tolower(allSummary$rep_summary$variation_measure[1]), ' exceeding the target 20%.')
 
@@ -285,7 +308,7 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
 ### recommendations based on blank data 
 rec_list <- list()
 if (number_of_lab_blanks == 0) {
-  lab_blank_rec <- '**Laboratory blanks** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive reporting of laboratory blanks into WQP would enable more meaningful assessment of data quality differences among datasets and laboratories.'
+  lab_blank_rec <- '**Laboratory blanks** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive collection and reporting of laboratory blanks for conducting meaningful assessments of data quality, identifying contamination, and making comparisons among data from different laboratories.'
 } else if (number_of_lab_blanks < no_years) {
   lab_blank_rec <- '**Laboratory blanks** appear in the reported data at a rate of less than one lab blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. More comprehensive reporting of laboratory blanks into WQP would enable more meaningful assessment of data quality differences among datasets and laboratories.'
 } else if (number_of_lab_blanks < 0.10*no_samples) {
@@ -300,9 +323,9 @@ rec_list$lab_blank <- lab_blank_rec
 if (number_of_field_blanks == 0) {
   field_blank_rec <- '**Field blanks** were either not collected or not input into WQP. More comprehensive reporting of field blanks in WQX is critical for evaluating contamination and bias in the generated data.'
 } else if (number_of_field_blanks < no_years) {
-  field_blank_rec <- '**Field blanks** appear in the reported data at a rate of less than one field blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. Increasing the frequency of field blanks to at least 10% is highly recommended.'
+  field_blank_rec <- paste0('**Field blanks** appear in the reported data at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). This indicates either minimal collection or incomplete reporting of these important QC data to WQP. Increasing the frequency of field blanks to at least 10% is highly recommended. Improving collection and reporting of field blank data is critical to ensure that project data can be useful for decision-making.')
 } else if (number_of_field_blanks < 0.10*no_samples) {
-  field_blank_rec <- paste0('**Field blanks** appear in the data reported to WQP at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field blanks to at least 10% of samples.')
+  field_blank_rec <- paste0('**Field blanks** appear in the data reported to WQP at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field blanks to at least 10% of all samples collected.')
 }else if (number_of_field_blanks >= 0.10*no_samples) {
   field_blank_rec <- paste0('**Field blanks** represent ', round(number_of_field_blanks / no_samples*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
@@ -321,12 +344,16 @@ if ((length(parameters_without_blanks) == 0)) {
 }
 
 ### blank performance and possible sample handling issues
-if(percent_field_blank_detects <= 10) {
-  blank_issues <- 'This is enocuraging and indicates consistent attention to detail during sample collection and handling.'
+if(is.na(percent_field_blank_detects)) {
+  blank_issues <- 'The absence of blank data for core CWA106 parameters makes it impossible to evaluate bias in the dataset.'
+} else if(percent_field_blank_detects <= 10) {
+  blank_issues <- 'This is encouraging and indicates consistent attention to detail during sample collection and handling.'
 } else {
   blank_issues <- 'This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the frequency of blank collection and re-training staff are among the possible ways to reduce contamination during sample collection and handling.'
 }
 
+# ### simplify message if there's no blank data
+# if (number_of_field_blanks == 0) {
 
 rec_list$blank_freq_time  <- blank_collection_consistency_time
 rec_list$blank_freq_param <- blank_collection_consistency_param
@@ -366,7 +393,7 @@ if (number_of_field_reps == 0) {
 } else if (number_of_field_reps < no_years) {
   field_rep_rec <- '**Field replicates** appear in the reported data at a rate of less than one field blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. Increasing the frequency of field replicates to at least 10% is highly recommended.'
 } else if (number_of_field_reps < 0.10*samples_for_rep_comparison) {
-  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field replicates to at least 10% of samples.')
+  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field replicates to at least 10% of all samples.')
 }else if (number_of_field_reps >= 0.10*samples_for_rep_comparison) {
   field_rep_rec <- paste0('**Field replicates** represent ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
