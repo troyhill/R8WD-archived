@@ -2,7 +2,7 @@
 #'
 #' @param data data downloaded from WQP and pre-processed using `preProcessResults`
 #'
-#' @return list of dataframes:  all rep data; lightly processed rep data; rep performance summarized (as RPD) by Tribe, analyte, year; blank data (field and lab); blank performance summarized (as number of values above MDLs) by Tribe, analyte, year, field/lab; data with field reps averaged and blanks removed
+#' @return list of dataframes:  all rep data; lightly processed rep data; rep performance summarized (as RPD if there is a maximum of two replicates in a set, or as coefficents of variation for n>2) by Tribe, analyte, year; blank data (field and lab); blank performance summarized (as number of values above MDLs) by Tribe, analyte, year, field/lab; data with field reps averaged and blanks removed
 #' @export
 #'
 #' @importFrom plyr ddply
@@ -20,7 +20,7 @@ summarizeQC <- function(data) {
   ### function returns a list with a bunch of dataframes:
   ### - all rep data
   ### - lightly processed rep data
-  ### - rep performance summarized (as RPD) by Tribe, analyte, year
+  ### - rep performance summarized (as RPD or CV) by Tribe, analyte, year
   ### - blank data (field and lab)
   ### - blank performance summarized (as number of values above MDLs) by Tribe, analyte, year, field/lab
   ### - data with field reps averaged and blanks removed
@@ -28,8 +28,9 @@ summarizeQC <- function(data) {
 
   ### Replicate performance
   ### pull out dups, exclude blanks
+  ### including ActivityDepthHeightMeasure.MeasureValue in the ID avoids counting depth profiles as replicates (sometimes n = 17)
   tmpDat           <- data[!grepl(x = data$ActivityTypeCode, pattern = 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
-  indicator_vector <- paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__",tmpDat$ActivityStartDate)
+  indicator_vector <- paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__", tmpDat$ActivityDepthHeightMeasure.MeasureValue, "__",tmpDat$ActivityStartDate)
   tmpDat$id        <- indicator_vector
   tmpDat           <- tmpDat[tmpDat$id %in% indicator_vector[duplicated(indicator_vector)], ]
   tmpDat           <- tmpDat[order(tmpDat$id), ]
@@ -40,12 +41,29 @@ summarizeQC <- function(data) {
   tmpDat$ActivityTypeCode <- ifelse(tmpDat$id %in% lab.reps, 'Lab replicate', 'Field replicate') # hesitant to overwrite this column but I think it makes sense to use the existing column.
   ###
 
+  ### determine whether to use RPD or CV (are all reps pairs or are there cases with n>2?)
+  largest_replicate_set <- max(table(tmpDat$id))
+  ### These may be duplicate entries? Everything is identical, including the values:
+  # tst <- data[!grepl(x = data$ActivityTypeCode, pattern = 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
+  # tst$id <- paste0(tst$OrganizationFormalName,"__", tst$OrganizationIdentifier, '__', tst$MonitoringLocationIdentifier, "__", tst$CharacteristicName, "__", tst$ActivityDepthHeightMeasure.MeasureValue, "__",tst$ActivityStartDate)
+  # tst[grep(x = tst$id, pattern = 'Turtle Mountain Environmental Office__TURTLEMT__TURTLEMT-WHEATBEACH__E_coli__NA__2018-07-31'), ]
   ### ISSUE: FUN not found in local environment
-  fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year'),
-                                      # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
-                                      plyr::summarize,
-                                      RPD  = rpd(as.numeric(ResultMeasureValue))) # ,
-  # n = sum(!is.na(as.numeric(ResultMeasureValue)))) # zeroes = reps were identical. Suggestive of raw data not being included
+  if (largest_replicate_set == 2) {
+    fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year'),
+                                         # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
+                                         plyr::summarize,
+                                         RPD  = rpd(as.numeric(ResultMeasureValue))) # ,
+    variation_measure <- 'Relative Percent Difference'
+    # n = sum(!is.na(as.numeric(ResultMeasureValue)))) # zeroes = reps were identical. Suggestive of raw data not being included
+  } else if (largest_replicate_set > 2) {
+    fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year'),
+                                         # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
+                                         plyr::summarize,
+                                         RPD  = cv(as.numeric(ResultMeasureValue)))
+    variation_measure <- 'Coefficient of Variation'
+  }
+  message('Replicate sets had a maximum n = ', largest_replicate_set,'; ', variation_measure, ' used as variation measure.')
+
   fieldReps_proc_mean   <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year') ,
                                        plyr::summarize,
                                        aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
@@ -60,6 +78,7 @@ summarizeQC <- function(data) {
                              RPD.mean = mean(RPD, na.rm = TRUE),
                              RPD.sd   = sd(RPD, na.rm = TRUE)
   )
+  rep.summary$variation_measure <- variation_measure
   ### tmpDat[tmpDat$id == reps_all$id[2], ] # strange
   ### todo: resolve warnings appropriately
   # Warning messages:
@@ -73,7 +92,7 @@ summarizeQC <- function(data) {
   ### remove rep values (lose a lot of columns; this could be improved)
   ### rename and join data
   newDat        <- as.data.frame(do.call('rbind', strsplit(as.character(fieldReps_proc_mean$id),'__',fixed=TRUE)))
-  names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityStartDate')
+  names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityDepthHeightMeasure.MeasureValue', 'ActivityStartDate')
   newDat$ResultValueMeasure <- fieldReps_proc_mean$aver
   newDat$DetectionQuantitationLimitMeasure.MeasureValue <- fieldReps_proc_mean$MDL
   # newDat$units

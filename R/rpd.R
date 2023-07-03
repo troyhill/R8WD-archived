@@ -9,11 +9,11 @@
 #' rpd(c(10, 20))
 rpd <- function(x) {
   # calculate relative percent difference
-  val <- abs(diff(x, na.rm = TRUE)) / mean(x, na.rm = TRUE) * 100
-  if (length(x) < 2) {
+  val <- abs(diff(na.omit(x))) / mean(x, na.rm = TRUE) * 100
+  if (length(na.omit(x)) < 2) {
     val <- NA # has no meaning for n = 1
   }
-  if (length(x) > 2) {
+  if (length(na.omit(x)) > 2) {
     val <- NA # not appropriate for n >2
     cat('Relative percent differences should not be used where n>2\n')
   }
