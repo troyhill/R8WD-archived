@@ -2,7 +2,7 @@
 % Please edit documentation in R/cv.R
 \name{cv}
 \alias{cv}
-\title{Calculate Coefficient of Variation}
+\title{Calculate Coefficient of Variation (as percent not decimal fraction, e.g., values fall on a scale of 0-100)}
 \usage{
 cv(x)
 }
@@ -13,7 +13,7 @@ cv(x)
 a single numeric value
 }
 \description{
-Calculate Coefficient of Variation
+Calculate Coefficient of Variation (as percent not decimal fraction, e.g., values fall on a scale of 0-100)
 }
 \examples{
 cv(c(10, 20))
