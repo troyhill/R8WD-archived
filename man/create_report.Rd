@@ -4,7 +4,7 @@
 \alias{create_report}
 \title{Generate a Water Quality Report for an organization}
 \usage{
-create_report(org = "CHEYRIVR", extFile = "script_hello_worldv3.R")
+create_report(org = "TURTLEMT", extFile = "script_generateReport.qmd")
 }
 \arguments{
 \item{org}{organization (short name in WQP) whose data should be used to build the report}
@@ -12,7 +12,7 @@ create_report(org = "CHEYRIVR", extFile = "script_hello_worldv3.R")
 \item{extFile}{name of report-generating script, located in the inst/extdata folder of the R8WD R package}
 }
 \value{
-Quarto report
+Quarto markdown document
 }
 \description{
 Generate a Water Quality Report for an organization
