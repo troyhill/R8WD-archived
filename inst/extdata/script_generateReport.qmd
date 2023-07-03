@@ -17,9 +17,6 @@ css: styles.css
 
 ```{r}
 #| include: false
-### make sure these are added as package dependencies
-### consider using chapter format: https://stackoverflow.com/questions/72544775/passing-data-from-one-qmd-file-to-another-in-a-quarto-book-template
-### or includes: https://quarto.org/docs/authoring/includes.html
 library(ggplot2)
 library(plyr)
 library(gt)
@@ -34,12 +31,11 @@ Tribal_org <- 'REPLACE_THIS_TEXT'
 #| output: false
 #| include: false
 
-tribeData1 <- dataRetrieval::readWQPdata(organization = Tribal_org,
-                                         characteristicName = params$params,
-                                         startDate = "01-01-2015",
-                                         endDate   = "12-31-2022")
-
-tribeData2 <- preProcessResults(tribeData1, multiplier = 0.5)
+tribeData2 <- getWQP(organization = Tribal_org,
+       characteristicName = params$params,
+       startDate = "01-01-2015",
+       endDate   = "12-31-2022",
+       multiplier = 0.5)
 
 ### homogenize parameter names
 tribeData2$CharacteristicName <- params$new_param[match(tribeData2$CharacteristicName, params$params)]
@@ -51,7 +47,7 @@ if (length(unique(tribeData2$OrganizationIdentifier) > 1)) {
   tribeData2$OrganizationIdentifier <- names(which.max(table(tribeData2$OrganizationIdentifier)))
 }
 
-allSummary <- summarizeQC(data = tribeData2) # lot of single-observation 'reps' - look into this
+allSummary <- summarizeQC(data = tribeData2)
 
 ### identify parameters collected on sondes (no expectation of blank QC data)
 sonde_parameters <- c('DO', 'pH', 'Temperature', 'Turbidity', 'Specific conductivity', 'Conductivity')
@@ -60,13 +56,13 @@ included_params <- paste0(unique(tribeData2$CharacteristicName)[1:(length(unique
 included_params <- sub(",([^,]*)$",", and\\1", included_params)
 ```
 
-## Water Quality Data Analysis Report for `r tribeData1$OrganizationFormalName[1]`
+## Water Quality Data Analysis Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
 ## Introduction
 
 Map of sampling locations, list of parameters etc.
 
-This report focuses on a set of core physical and chemical measures common among CWA106 monitoring programs. Relevant parameters measured by `r tribeData1$OrganizationFormalName[1]` include `r included_params`.
+This report focuses on a set of core physical and chemical measures common among CWA106 monitoring programs. Relevant parameters measured by `r allSummary$data$OrganizationFormalName[1]` include `r included_params`.
 
 ## Quality Control Summary
 
@@ -83,18 +79,34 @@ allSummary$blank_summary$`Sample Type` <- sapply(strsplit(allSummary$blank_summa
 allSummary$blank_summary$`Exceedances (%)` <- paste0(round(allSummary$blank_summary$exceedances / allSummary$blank_summary$n, 3)*100, '%')
 allSummary$blank_summary[, 5] <- round(allSummary$blank_summary[, 5], 3)
 names(allSummary$blank_summary)[c(3, 5:7, 9)] <- c('Analyte', 'Year', 'Blanks', 'Mean value', 'Exceedances (>MDL)')
-gt(allSummary$blank_summary[, c(10, 3, 5:7, 9, 11)])
+blank_table <- allSummary$blank_summary[, c(10, 3, 5:7, 9, 11)]
+blank_table$`Mean value` <- sprintf("%.3f", round(blank_table$`Mean value`,3)) # keep trailing zeros
+gt(blank_table)
 ```
+
+
+```{r}
+#| echo: false
+#| fig-cap: Figure 1. Field blank performance for each analyte over time. Red lines indicate detection limits for each analyte during each sampling event.
+allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
+
+ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
+  geom_line(linetype = 2) + geom_point() + 
+  facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
+  geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linteype = 3) +
+  labs(y = 'Blank value', x = '')
+
+```
+
 
 ```{r}
 #| echo: false
 tmp <- table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)])
 
 ### if TN is always a calculated value, exclude it from total samples
-if ((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated')) {
+if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated'))) {
   sonde_parameters <- c(sonde_parameters, 'TN')
 }
-
 
 number_of_lab_blanks <- ifelse(grepl(x = names(tmp), pattern = 'Lab'), sum(tmp[grepl(x = names(tmp), pattern = 'Lab')]), 0)
 number_of_field_blanks <- ifelse(grepl(x = names(tmp), pattern = 'Field'), sum(tmp[grepl(x = names(tmp), pattern = 'Field')]), 0)
@@ -191,7 +203,7 @@ if(length(parameters_without_reps) < 1) {
 }
 TN_note <- NULL
 ### add a note if TN is a calculated quantity
-if (('TN' %in% parameters_without_reps) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated')) {
+if (('TN' %in% parameters_without_reps) && (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated')) {
   TN_note <- 'Although TN is identified as a calculated parameter in this study, replicate values should be calculated and reported in WQP. Replicates can be calculated using replicate data for the component compounds (TKN-N, NH3-N, NO3+NO2-N).'
 }
 
@@ -224,7 +236,7 @@ variation_measure_message <- ifelse(allSummary$rep_summary$variation_measure[1] 
 
 ```
 
-Over the period of record used for this report, `r tribeData1$OrganizationFormalName[1]` collected `r total_reps` sets of replicates. This combined total includes `r number_of_field_reps` field replicates and `r number_of_lab_reps` lab replicates. Field replicates comprised `r round(number_of_field_reps/ samples_for_rep_comparison*100)`% of all samples.
+Over the period of record used for this report, `r allSummary$data$OrganizationFormalName[1]` collected `r total_reps` sets of replicates. This combined total includes `r number_of_field_reps` field replicates and `r number_of_lab_reps` lab replicates. Field replicates comprised `r round(number_of_field_reps/ samples_for_rep_comparison*100)`% of all samples.
 
 In comparison to the 20% target level of variation, replicate performance was `r ifelse(reps_pct_above20 <= 10, 'excellent', ifelse(reps_pct_above20 <= 25, 'generally good', ifelse(reps_pct_above20 <= 50, 'generally mixed', ifelse(reps_pct_above20 > 50, 'not good'))))`. `r summary_reps_above20`
 
@@ -305,9 +317,17 @@ if ((length(parameters_without_blanks) == 0)) {
   blank_collection_consistency_param <- '**Blank collection by parameter:** Blanks were not reported consistently across parameters, with some analytes having no blank data found in the Water Quality Portal. Project managers should ensure that every analyte has field and lab blank data reported for every year in which that analyte is measured.'
 }
 
-rec_list$blank_freq_time <- blank_collection_consistency_time
+### blank performance and possible sample handling issues
+if(percent_field_blank_detects <= 10) {
+  blank_issues <- 'This is enocuraging and indicates consistent attention to detail during sample collection and handling.'
+} else {
+  blank_issues <- 'This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the frequency of blank collection and re-training staff are among the possible ways to reduce contamination during sample collection and handling.'
+}
 
+
+rec_list$blank_freq_time  <- blank_collection_consistency_time
 rec_list$blank_freq_param <- blank_collection_consistency_param
+rec_list$blank_issues     <- paste0('**Blank performance:** ', percent_field_blank_detects, '% of blanks had evidence of contamination. ' , blank_issues)
 ```
 
 -   `r rec_list$lab_blank`
@@ -317,6 +337,8 @@ rec_list$blank_freq_param <- blank_collection_consistency_param
 -   `r rec_list$blank_freq_time`
 
 -   `r rec_list$blank_freq_param`
+
+-   `r rec_list$blank_issues`
 
 ### Quality Control Data: Replicates
 
@@ -360,15 +382,17 @@ if ((length(parameters_without_reps) == 0)) {
 }
 
 ### replicate performance and possible sample handling issues
-if(reps_pct_above20 <= 25) {
- rep_issues <- '**Replicate perfoemance:** Less than 25%  of replicates had undesirable levels of variation. This is very encouraging, and suggests consistency and attention to detail during sample collection and handling.'
+if(reps_pct_above20 <= 10) {
+  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling.'
 } else {
-  rep_issues <- paste0('**Replicate perfoemance:** ', reps_pct_above20, '% of replicates had undesirable levels of variation. This could indicate a need for improved consistency and attention to detail during sample collection and handling.')
+  rep_issues <- 'This level of imprecision suggests examining opportunities for improved consistency and attention to detail during sample collection and handling. Increasing the frequency of replicates is recommended to help identify the underlying issues.'
 }
+
 
 rec_list$rep_freq_time  <- rep_collection_consistency_time
 rec_list$rep_freq_param <- rep_collection_consistency_param
-rec_list$rep_issues     <- rep_issues
+rec_list$rep_issues     <- paste0('**Replicate performance:** ', reps_pct_above20, '% of replicates had problematic levels of imprecision. ' , rep_issues)
+
 ```
 
 -   `r rec_list$lab_rep`
@@ -380,3 +404,4 @@ rec_list$rep_issues     <- rep_issues
 -   `r rec_list$rep_freq_param` `r if(!is.null(TN_note)) TN_note`
 
 -   `r rec_list$rep_issues`
+
