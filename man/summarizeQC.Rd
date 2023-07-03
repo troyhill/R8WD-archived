@@ -10,7 +10,7 @@ summarizeQC(data)
 \item{data}{data downloaded from WQP and pre-processed using `preProcessResults`}
 }
 \value{
-list of dataframes:  all rep data; lightly processed rep data; rep performance summarized (as RPD) by Tribe, analyte, year; blank data (field and lab); blank performance summarized (as number of values above MDLs) by Tribe, analyte, year, field/lab; data with field reps averaged and blanks removed
+list of dataframes:  all rep data; lightly processed rep data; rep performance summarized (as RPD if there is a maximum of two replicates in a set, or as coefficents of variation for n>2) by Tribe, analyte, year; blank data (field and lab); blank performance summarized (as number of values above MDLs) by Tribe, analyte, year, field/lab; data with field reps averaged and blanks removed
 }
 \description{
 Summarize quality control data in a WQP dataset
