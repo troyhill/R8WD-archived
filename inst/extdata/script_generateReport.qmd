@@ -152,7 +152,7 @@ if(length(parameters_without_blanks) < 1) {
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
 years_with_blanks    <- as.numeric(unique(allSummary$blank_summary$Year))
 years_with_data      <- as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4))))
-years_without_blanks <- years_with_data[!(years_with_data %in% years_with_blanks)]
+years_without_blanks <- sort(years_with_data[!(years_with_data %in% years_with_blanks)])
 
 if(length(years_without_blanks) < 1) {
  year_blank_message <- 'Blank data was reported in every year during the period of record covered by this report.' 
@@ -232,7 +232,7 @@ if (('TN' %in% parameters_without_reps) && (unique(allSummary$data[allSummary$da
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
 years_with_reps    <- as.numeric(unique(allSummary$rep_summary$year))
 years_with_data    <- as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4))))
-years_without_reps <- years_with_data[!(years_with_data %in% years_with_reps)]
+years_without_reps <- sort(years_with_data[!(years_with_data %in% years_with_reps)])
 
 if(length(years_without_reps) < 1) {
  year_rep_message <- 'Replicate data was reported in every year during the period of record covered by this report.' 
