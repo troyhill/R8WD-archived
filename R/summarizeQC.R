@@ -95,6 +95,7 @@ summarizeQC <- function(data) {
   names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityDepthHeightMeasure.MeasureValue', 'ActivityStartDate')
   newDat$ResultValueMeasure <- fieldReps_proc_mean$aver
   newDat$DetectionQuantitationLimitMeasure.MeasureValue <- fieldReps_proc_mean$MDL
+  newDat$ActivityStartDate <- as.Date(newDat$ActivityStartDate, format = '%Y-%m-%d')
   # newDat$units
 
   returnDat2 <- plyr::rbind.fill(list(returnDat, newDat))
