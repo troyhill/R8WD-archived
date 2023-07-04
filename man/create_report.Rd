@@ -7,7 +7,7 @@
 create_report(org = "TURTLEMT", extFile = "script_generateReport.qmd")
 }
 \arguments{
-\item{org}{organization (short name in WQP) whose data should be used to build the report}
+\item{org}{organization (short name in WQP) whose data should be used to build the report. Multiple organization names can be input as a character vector; names will be homogenized and data will be pooled for analysis purposes.}
 
 \item{extFile}{name of report-generating script, located in the inst/extdata folder of the R8WD R package}
 }

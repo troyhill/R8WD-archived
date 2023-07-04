@@ -2,7 +2,7 @@
 
 #' Generate a Water Quality Report for an organization
 #'
-#' @param org organization (short name in WQP) whose data should be used to build the report
+#' @param org organization (short name in WQP) whose data should be used to build the report. Multiple organization names can be input as a character vector; names will be homogenized and data will be pooled for analysis purposes.
 #' @param extFile name of report-generating script, located in the inst/extdata folder of the R8WD R package
 #'
 #' @return Quarto markdown document
@@ -15,10 +15,15 @@ create_report <- function(org = 'TURTLEMT',
                             extFile = 'script_generateReport.qmd') {
   targetFile <- system.file('extdata', extFile, package = 'R8WD')
   newFile    <- tempfile('wqp_report', fileext = '.qmd')
-  token      <- 'REPLACE_THIS_TEXT'
+  token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
+  
+  ### if org is a vector, merge it
+  if (length(org) > 1) {
+    org <- paste0("\'", paste0(org, collapse = '\',\''), "\'")
+  }
   ### test for presence
   # grep(token, readLines(targetFile), value = TRUE)
-  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org)
+  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = toupper(org))
 
   fileConn   <- file(newFile)
   writeLines(newText, fileConn)

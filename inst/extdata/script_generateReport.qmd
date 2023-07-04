@@ -23,9 +23,8 @@ library(gt)
 library(dataRetrieval)
 library(R8WD)
 
-Tribal_org <- 'REPLACE_THIS_TEXT'
+Tribal_org <- c('REPLACE_THIS_TEXT')
 ```
-
 
 ```{r}
 #| echo: false
@@ -94,7 +93,6 @@ gt(blank_table)
 
 ```
 
-
 ```{r}
 #| echo: false
 #| warning: false
@@ -110,7 +108,6 @@ ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTyp
   labs(y = 'Blank value', x = '')
 }
 ```
-
 
 ```{r}
 #| echo: false
