@@ -10,20 +10,23 @@ format:
     fontcolor: black
     toc: true
     toc-location: left
-    toc-title: Contents
+    toc-title: Table of Contents
     toc-depth: 3
-css: styles.css
 ---
 
 ```{r}
 #| include: false
 library(ggplot2)
+library(downloadthis)
 library(plyr)
 library(gt)
 library(dataRetrieval)
 library(R8WD)
 
-Tribal_org <- c('REPLACE_THIS_TEXT')
+Tribal_org    <- c('REPLACE_THIS_TEXT')
+start_date    <- c('REPLACE_START_DATE')
+end_date      <- c('REPLACE_END_DATE')
+params_to_use <- c('REPLACE_PARAMS')
 ```
 
 ```{r}
@@ -31,11 +34,12 @@ Tribal_org <- c('REPLACE_THIS_TEXT')
 #| output: false
 #| include: false
 
-tribeData2 <- getWQP(organization = Tribal_org,
-       characteristicName = params$params,
-       startDate = "01-01-2015",
-       endDate   = "12-31-2022",
-       multiplier = 0.5)
+tribeData2 <- getWQP(
+       organization       = Tribal_org,
+       characteristicName = params$params[params_to_use],
+       startDate          = start_date,
+       endDate            = end_date,
+       multiplier         = 0.5)
 
 ### homogenize parameter names
 tribeData2$CharacteristicName <- params$new_param[match(tribeData2$CharacteristicName, params$params)]
@@ -93,6 +97,7 @@ gt(blank_table)
 
 ```
 
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -108,6 +113,7 @@ ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTyp
   labs(y = 'Blank value', x = '')
 }
 ```
+
 
 ```{r}
 #| echo: false
@@ -151,8 +157,8 @@ if(length(parameters_without_blanks) < 1) {
 ### identify years without QC data 
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
 years_with_blanks    <- as.numeric(unique(allSummary$blank_summary$Year))
-years_with_data      <- as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4))))
-years_without_blanks <- sort(years_with_data[!(years_with_data %in% years_with_blanks)])
+years_with_data      <- sort(as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4)))))
+years_without_blanks <- years_with_data[!(years_with_data %in% years_with_blanks)]
 
 if(length(years_without_blanks) < 1) {
  year_blank_message <- 'Blank data was reported in every year during the period of record covered by this report.' 
@@ -208,8 +214,8 @@ samples_for_rep_comparison <- sum(!is.na(allSummary$data$ResultMeasureValue[allS
 ### Replicate sets above 20% variation, by parameter
 ### can split this into field vs. lab in future if orgs report lab reps
 above20_by_param <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), plyr::summarize,
-      `No. replicate sets`       = sum(!is.na(RPD)),
-      `No. replicates above 20%` = sum(RPD > 20, na.rm = TRUE),
+      `Number of replicate sets`       = sum(!is.na(RPD)),
+      `Sets with variation above 20%` = sum(RPD > 20, na.rm = TRUE),
       `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
       )
 names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
@@ -232,7 +238,7 @@ if (('TN' %in% parameters_without_reps) && (unique(allSummary$data[allSummary$da
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
 years_with_reps    <- as.numeric(unique(allSummary$rep_summary$year))
 years_with_data    <- as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4))))
-years_without_reps <- sort(years_with_data[!(years_with_data %in% years_with_reps)])
+years_without_reps <- years_with_data[!(years_with_data %in% years_with_reps)]
 
 if(length(years_without_reps) < 1) {
  year_rep_message <- 'Replicate data was reported in every year during the period of record covered by this report.' 
@@ -252,7 +258,7 @@ reps_pct_above20        <- round(total_reps_above20 / sum(!is.na(allSummary$rep_
 summary_reps_above20    <- paste0(total_reps_above20, ' sets of replicates (', reps_pct_above20, '% of the total) had ', tolower(allSummary$rep_summary$variation_measure[1]), ' exceeding the target 20%.')
 
 variation_measure_message <- ifelse(allSummary$rep_summary$variation_measure[1] == "Coefficient of Variation", 
-                                    'Some replicates sets included more than two individual replicates. This could indicate duplicate entries in WQP or other issues, or they may truly reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.', 
+                                    'Some replicates sets included more than two individual replicates. This could indicate errors during data entry into WQP, or it may reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.', 
                                     'Replicate sets contained a maximum of two individual samples, and so the relative percent difference (RPD) was used as the measure of variation among replicates. Lower RPDs indicate lower levels of variation among replicates.')
 
 ```
@@ -429,3 +435,114 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** ', reps_pct_above2
 -   `r rec_list$rep_freq_param` `r if(!is.null(TN_note)) TN_note`
 
 -   `r rec_list$rep_issues`
+
+
+
+## Supporting data
+
+The following files contain the data used in this report:
+
+```{r}
+#| echo: false
+#| warning: false
+blank_file <- tempfile(fileext = '.csv')
+blank_data <- write.csv(allSummary$blank_proc, file = blank_file, row.names = FALSE)
+appendToFileName <- paste0("_", allSummary$data$OrganizationIdentifier[1], "_", min(years_with_data, na.rm = TRUE), "_", max(years_with_data, na.rm = TRUE))
+### can we avoid using downloadthis package?
+downloadthis::download_file(path = blank_file,
+  output_name  = paste0("Blank_data_raw", appendToFileName),
+  button_label = "Download blank data", 
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+
+\n 
+
+```{r}
+#| echo: false
+#| warning: false
+blank_summary_file <- tempfile(fileext = '.csv')
+blank_summary_data <- write.csv(allSummary$blank_summary, file = blank_summary_file, row.names = FALSE)
+downloadthis::download_file(path = blank_summary_file,
+  output_name  = paste0("Blank_data_summary", appendToFileName),
+  button_label = "Download blank data (annual summary)",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+
+```{r}
+#| echo: false
+#| warning: false
+rep_file <- tempfile(fileext = '.csv')
+rep_data <- write.csv(allSummary$rep_raw, file = rep_file, row.names = FALSE)
+downloadthis::download_file(path = rep_file,
+  output_name  = paste0("Replicate_data_raw", appendToFileName),
+  button_label = "Download replicate data (raw)",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+    
+    
+```{r}
+#| echo: false
+#| warning: false
+rep_file2 <- tempfile(fileext = '.csv')
+rep_data2 <- write.csv(allSummary$rep_proc, file = rep_file2, row.names = FALSE)
+downloadthis::download_file(path = rep_file2,
+  output_name  = paste0("Replicate_data_processed", appendToFileName),
+  button_label = "Download replicate data (processed)",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+    
+```{r}
+#| echo: false
+#| warning: false
+rep_summary_file <- tempfile(fileext = '.csv')
+rep_summary_data <- write.csv(allSummary$rep_summary, file = rep_summary_file, row.names = FALSE)
+downloadthis::download_file(path = rep_summary_file,
+  output_name  = paste0("Replicate_data_summary", appendToFileName),
+  button_label = "Download replicate data (annual summary)",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+data_file <- tempfile(fileext = '.csv')
+data_summary_data <- write.csv(allSummary$data, file = data_file, row.names = FALSE)
+downloadthis::download_file(path = data_file,
+  output_name  = paste0("Processed_data", appendToFileName),
+  button_label = "Download post-QC data",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+raw_data_file <- tempfile(fileext = '.csv')
+raw_data_summary_data <- write.csv(tribeData2[order(tribeData2$OrganizationFormalName, tribeData2$ActivityStartDate, tribeData2$MonitoringLocationIdentifier, tribeData2$CharacteristicName), ], file = raw_data_file, row.names = FALSE)
+downloadthis::download_file(path = raw_data_file,
+  output_name  = paste0("WQP_data", appendToFileName),
+  button_label = "Download WQP data",
+  button_type  = "default",
+  has_icon     = TRUE,
+  icon         = "fa fa-save"
+  )
+```
