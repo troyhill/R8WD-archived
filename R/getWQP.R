@@ -1,4 +1,3 @@
-
 #' Pull and pre-process Water Quality Portal data
 #'
 #' @param organization organization name(s), sent to dataRetrieval::readWQPdata
@@ -9,18 +8,25 @@
 #'
 #' @return list of dataframes
 #' @importFrom dataRetrieval readWQPdata
+#' @importFrom dataRetrieval whatWQPsites
 #' @export
-#'
+
 getWQP <- function(organization = Tribal_org,
                    characteristicName = params$params,
                    startDate = "01-01-2015",
                    endDate   = "12-31-2022",
                    multiplier = 0.5) {
-  dat <- dataRetrieval::readWQPdata(organization = organization,
-                             characteristicName = characteristicName,
-                             startDate = startDate,
-                             endDate   = endDate)
-
-  dat2 <- R8WD::preProcessResults(dat, multiplier = multiplier)
+  
+  WQPQuery <- list(organization = organization,
+                   characteristicName = characteristicName,
+                   startDate = startDate,
+                   endDate   = endDate)
+  
+  dat <- dataRetrieval::readWQPdata(WQPQuery)
+  dat.sd <- dataRetrieval::whatWQPsites(WQPQuery)
+  
+  dat.comb <- joinWQPProfiles(dat, dat.2)
+  
+  dat2 <- R8WD::preProcessResults(dat.comb, multiplier = multiplier)
   invisible(dat2)
 }
