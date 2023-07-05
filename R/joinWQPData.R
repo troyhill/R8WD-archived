@@ -1,7 +1,13 @@
 #' Join WQP Measurement and Site Data
 #'
-#' @param fullData 
-#' @param sites 
+#' @description This function takes data from the same WQP query and combines
+#'              site data with measurements to map observations with physical 
+#'              sampling locations
+#'
+#' @param fullData output of query to WQP portal using readWQPdata function in 
+#'        the dataRetrieval package
+#' @param sites output of query to WQP portal using whatWQPsites function in the
+#'        dataRetrieval package
 #'
 #' @return a combined data frame of WQP measurements with corresponding sampling
 #'         site data
