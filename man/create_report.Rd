@@ -4,10 +4,22 @@
 \alias{create_report}
 \title{Generate a Water Quality Report for an organization}
 \usage{
-create_report(org = "TURTLEMT", extFile = "script_generateReport.qmd")
+create_report(
+  org = "TURTLEMT",
+  startDate = "01-01-2015",
+  endDate = "12-31-2022",
+  parameters = c(1:length(params$params)),
+  extFile = "script_generateReport.qmd"
+)
 }
 \arguments{
 \item{org}{organization (short name in WQP) whose data should be used to build the report. Multiple organization names can be input as a character vector; names will be homogenized and data will be pooled for analysis purposes.}
+
+\item{startDate}{start date for data used in the report, in format `\%m-\%d-\%Y`}
+
+\item{endDate}{final date for data used in the report, in format `\%m-\%d-\%Y`}
+
+\item{parameters}{parameters to use in report. Must be entered as an index of acceptable parameters listed in params$params (e.g., `parameters = c(1:4,7)`)}
 
 \item{extFile}{name of report-generating script, located in the inst/extdata folder of the R8WD R package}
 }
