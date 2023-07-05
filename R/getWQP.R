@@ -25,7 +25,7 @@ getWQP <- function(organization = Tribal_org,
   dat <- dataRetrieval::readWQPdata(WQPQuery)
   dat.sd <- dataRetrieval::whatWQPsites(WQPQuery)
   
-  dat.comb <- joinWQPProfiles(dat, dat.2)
+  dat.comb <- joinWQPProfiles(dat, dat.sd)
   
   dat2 <- R8WD::preProcessResults(dat.comb, multiplier = multiplier)
   invisible(dat2)
