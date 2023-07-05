@@ -13,7 +13,7 @@
 #'         site data
 #'
 
-JoinWQPProfiles <- function(fullData = "null",
+joinWQPProfiles <- function(fullData = "null",
                             sites = "null"){
   
   fullData.df <- fullData
