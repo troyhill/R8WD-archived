@@ -16,14 +16,12 @@ create_report <- function(org = 'TURTLEMT',
   targetFile <- system.file('extdata', extFile, package = 'R8WD')
   newFile    <- tempfile('wqp_report', fileext = '.qmd')
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
-  
-  ### if org is a vector, merge it
-  if (length(org) > 1) {
-    org <- paste0("\'", paste0(org, collapse = '\',\''), "\'")
-  }
+
+  ### if org is a vector, create an insertable string. This is benign where length == 1, so no ifelse statement
+  org <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
   ### test for presence
   # grep(token, readLines(targetFile), value = TRUE)
-  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = toupper(org))
+  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org)
 
   fileConn   <- file(newFile)
   writeLines(newText, fileConn)
