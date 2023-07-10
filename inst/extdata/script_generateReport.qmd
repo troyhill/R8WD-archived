@@ -1,6 +1,5 @@
 ---
 title: ""
-# format: html
 editor: visual
 format: 
   html:
@@ -60,7 +59,29 @@ included_params <- paste0(unique(tribeData2$CharacteristicName)[1:(length(unique
 included_params <- sub(",([^,]*)$",", and\\1", included_params)
 ```
 
+```{r}
+#| include: false
+tribal_logo_filename <- list.files(path = file.path(system.file('extdata', package = 'R8WD'), 'seals'), pattern = Tribal_org)
+img_path <- file.path(system.file('extdata', package = 'R8WD'), 'seals', tribal_logo_filename)
+
+img_path_epa <- system.file('extdata/seals', 'epa_seal.png', package = 'R8WD')
+img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'epa_seal.png')
+```
+
+
 ## Water Quality Data Analysis Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
+
+::: {layout-ncol="2" layout-nrow="1"}
+![](`r img_path_epa`){width="150" fig-align="left"}
+
+![](`r img_path`){width="150" fig-align="right"}
+:::
+
+
+## Disclaimer
+
+The information in this report is provided on an "as is" basis and its use does not imply endorsement or verification by United States Environmental Protection Agency (EPA). These data and any interpretations do not necessarily represent the EPA’s official position or viewpoint, expressed or implied. EPA strongly recommends careful attention be paid to metadata files associated with these data to better understand limitations, restrictions or intended use. The U.S. EPA shall not be held liable for improper or incorrect use of the data. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by EPA. The EPA seal and logo shall not be used in any manner to imply endorsement of any commercial product or activity by EPA or the United States Government.
+
 
 ## Introduction
 
@@ -97,7 +118,6 @@ gt(blank_table)
 
 ```
 
-
 ```{r}
 #| echo: false
 #| warning: false
@@ -113,7 +133,6 @@ ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTyp
   labs(y = 'Blank value', x = '')
 }
 ```
-
 
 ```{r}
 #| echo: false
@@ -436,8 +455,6 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** ', reps_pct_above2
 
 -   `r rec_list$rep_issues`
 
-
-
 ## Supporting data
 
 The following files contain the data used in this report:
@@ -458,7 +475,7 @@ downloadthis::download_file(path = blank_file,
   )
 ```
 
-\n 
+\n
 
 ```{r}
 #| echo: false
@@ -487,8 +504,7 @@ downloadthis::download_file(path = rep_file,
   icon         = "fa fa-save"
   )
 ```
-    
-    
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -502,7 +518,7 @@ downloadthis::download_file(path = rep_file2,
   icon         = "fa fa-save"
   )
 ```
-    
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -517,7 +533,6 @@ downloadthis::download_file(path = rep_summary_file,
   )
 ```
 
-
 ```{r}
 #| echo: false
 #| warning: false
@@ -531,7 +546,6 @@ downloadthis::download_file(path = data_file,
   icon         = "fa fa-save"
   )
 ```
-
 
 ```{r}
 #| echo: false
