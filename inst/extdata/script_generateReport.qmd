@@ -68,7 +68,6 @@ img_path_epa <- system.file('extdata/seals', 'epa_seal.png', package = 'R8WD')
 img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'epa_seal.png')
 ```
 
-
 ## Water Quality Data Analysis Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
 ::: {layout-ncol="2" layout-nrow="1"}
@@ -77,11 +76,9 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 ![](`r img_path`){width="150" fig-align="right"}
 :::
 
-
 ## Disclaimer
 
-The information in this report is provided on an "as is" basis and its use does not imply endorsement or verification by United States Environmental Protection Agency (EPA). These data and any interpretations do not necessarily represent the EPA’s official position or viewpoint, expressed or implied. EPA strongly recommends careful attention be paid to metadata files associated with these data to better understand limitations, restrictions or intended use. The U.S. EPA shall not be held liable for improper or incorrect use of the data. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by EPA. The EPA seal and logo shall not be used in any manner to imply endorsement of any commercial product or activity by EPA or the United States Government.
-
+The information in this report is provided on an "as is" basis and its use does not imply endorsement or verification by United States Environmental Protection Agency (EPA). These data and any interpretations do not necessarily represent the EPA's official position or viewpoint, expressed or implied. EPA strongly recommends careful attention be paid to metadata files associated with these data to better understand limitations, restrictions or intended use. The U.S. EPA shall not be held liable for improper or incorrect use of the data. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by EPA. The EPA seal and logo shall not be used in any manner to imply endorsement of any commercial product or activity by EPA or the United States Government.
 
 ## Introduction
 
