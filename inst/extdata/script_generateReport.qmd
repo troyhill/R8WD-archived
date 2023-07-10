@@ -1,6 +1,7 @@
 ---
 title: ""
-editor: visual
+editor: 
+  mode: source
 format: 
   html:
     embed-resources: true
