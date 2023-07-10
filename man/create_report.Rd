@@ -9,7 +9,8 @@ create_report(
   startDate = "01-01-2015",
   endDate = "12-31-2022",
   parameters = c(1:length(params$params)),
-  extFile = "script_generateReport.qmd"
+  extFile = "script_generateReport.qmd",
+  prompt_user = TRUE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ create_report(
 \item{parameters}{parameters to use in report. Must be entered as an index of acceptable parameters listed in params$params (e.g., `parameters = c(1:4,7)`)}
 
 \item{extFile}{name of report-generating script, located in the inst/extdata folder of the R8WD R package}
+
+\item{prompt_user}{if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.}
 }
 \value{
 Quarto markdown document
