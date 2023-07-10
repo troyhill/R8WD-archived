@@ -26,7 +26,7 @@ create_report <- function(org = 'TURTLEMT',
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
 
   if (prompt_user) {
-    if (!any(grepl(pattern = toupper(org), x = tribes))) {
+    if (!any(grepl(pattern = paste0('^', toupper(org), '$'), x = tribes))) {
       message(toupper(org), ' not found in list of Tribal organizations. Recommended organization names:\n', paste0(sort(tribes), collapse = '\n'))
     }
   }
