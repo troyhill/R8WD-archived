@@ -279,7 +279,7 @@ reps_pct_above20        <- round(total_reps_above20 / sum(!is.na(allSummary$rep_
 summary_reps_above20    <- paste0(total_reps_above20, ' sets of replicates (', reps_pct_above20, '% of the total) had ', tolower(allSummary$rep_summary$variation_measure[1]), ' exceeding the target 20%.')
 
 variation_measure_message <- ifelse(allSummary$rep_summary$variation_measure[1] == "Coefficient of Variation", 
-                                    'Some replicates sets included more than two individual replicates. This could indicate errors during data entry into WQP, or it may reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.', 
+                                    paste0('Some replicates sets included as many as ', max(table(allSummary$rep_raw$id)), ' individual replicates. This could indicate errors during data entry into WQP, or it may reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.'), 
                                     'Replicate sets contained a maximum of two individual samples, and so the relative percent difference (RPD) was used as the measure of variation among replicates. Lower RPDs indicate lower levels of variation among replicates.')
 
 ```
