@@ -28,7 +28,7 @@ create_report <- function(org = 'TURTLEMT',
   ### if org is a vector, create an insertable string. This is benign where length == 1, so no ifelse statement
   org <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
   if (prompt_user) {
-    if (!org %in% tribes) {
+    if (!any(grepl(pattern = org, x = tribes))) {
       message(org, ' not found in list of Tribal organizations. Recommended organization names:\n', paste0(tribes, collapse = '\n'))
     }
   }
