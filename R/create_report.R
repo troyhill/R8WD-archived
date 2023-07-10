@@ -25,13 +25,14 @@ create_report <- function(org = 'TURTLEMT',
   newFile    <- tempfile('wqp_report', fileext = '.qmd')
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
 
-  ### if org is a vector, create an insertable string. This is benign where length == 1, so no ifelse statement
-  org <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
   if (prompt_user) {
-    if (!any(grepl(pattern = org, x = tribes))) {
-      message(org, ' not found in list of Tribal organizations. Recommended organization names:\n', paste0(tribes, collapse = '\n'))
+    if (!any(grepl(pattern = toupper(org), x = tribes))) {
+      message(toupper(org), ' not found in list of Tribal organizations. Recommended organization names:\n', paste0(tribes, collapse = '\n'))
     }
   }
+
+  ### if org is a vector, create an insertable string. This is benign where length == 1, so no ifelse statement
+  org <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
   ### test for presence
   # grep(token, readLines(targetFile), value = TRUE) # remove ^ and $ to make this work
   newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org)
