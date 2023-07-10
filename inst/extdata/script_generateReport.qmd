@@ -55,10 +55,10 @@ allSummary <- summarizeQC(data = tribeData2)
 
 ### identify parameters collected on sondes (no expectation of blank QC data)
 sonde_parameters <- c('DO', 'pH', 'Temperature', 'Turbidity', 'Specific conductivity', 'Conductivity')
-
 included_params <- paste0(unique(tribeData2$CharacteristicName)[1:(length(unique(tribeData2$CharacteristicName))-1)], collapse = ', ')
 included_params <- sub(",([^,]*)$",", and\\1", included_params)
 ```
+
 
 ```{r}
 #| include: false
@@ -69,6 +69,7 @@ img_path_epa <- system.file('extdata/seals', 'epa_seal.png', package = 'R8WD')
 img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'epa_seal.png')
 ```
 
+
 ## Water Quality Data Analysis Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
 ::: {layout-ncol="2" layout-nrow="1"}
@@ -77,15 +78,18 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 ![](`r img_path`){width="150" fig-align="right"}
 :::
 
+
 ## Disclaimer
 
-The information in this report is provided on an "as is" basis and its use does not imply endorsement or verification by United States Environmental Protection Agency (EPA). These data and any interpretations do not necessarily represent the EPA's official position or viewpoint, expressed or implied. EPA strongly recommends careful attention be paid to metadata files associated with these data to better understand limitations, restrictions or intended use. The U.S. EPA shall not be held liable for improper or incorrect use of the data. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by EPA. The EPA seal and logo shall not be used in any manner to imply endorsement of any commercial product or activity by EPA or the United States Government.
+The information in this report is provided on an "as is" basis and its use does not imply endorsement or verification by United States Environmental Protection Agency (EPA). These data and any interpretations do not necessarily represent the EPA’s official position or viewpoint, expressed or implied. EPA strongly recommends careful attention be paid to metadata files associated with these data to better understand limitations, restrictions or intended use. The U.S. EPA shall not be held liable for improper or incorrect use of the data. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by EPA. The EPA seal and logo shall not be used in any manner to imply endorsement of any commercial product or activity by EPA or the United States Government.
+
 
 ## Introduction
 
 Map of sampling locations, list of parameters etc.
 
 This report focuses on a set of core physical and chemical measures common among CWA106 monitoring programs. Relevant parameters measured by `r allSummary$data$OrganizationFormalName[1]` include `r included_params`.
+
 
 ## Quality Control Summary
 
@@ -109,12 +113,11 @@ blank_table <- allSummary$blank_summary[, c(10, 3, 5:7, 9, 11)]
 blank_table$`Mean value` <- sprintf("%.3f", round(blank_table$`Mean value`,3)) # keep trailing zeros
 
 allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
-
-
 }
 gt(blank_table)
 
 ```
+
 
 ```{r}
 #| echo: false
@@ -131,6 +134,7 @@ ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTyp
   labs(y = 'Blank value', x = '')
 }
 ```
+
 
 ```{r}
 #| echo: false
@@ -340,11 +344,9 @@ rec_list$lab_blank <- lab_blank_rec
 ### field blanks
 if (number_of_field_blanks == 0) {
   field_blank_rec <- '**Field blanks** were either not collected or not input into WQP. More comprehensive reporting of field blanks in WQX is critical for evaluating contamination and bias in the generated data.'
-} else if (number_of_field_blanks < no_years) {
-  field_blank_rec <- paste0('**Field blanks** appear in the reported data at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). This indicates either minimal collection or incomplete reporting of these important QC data to WQP. Increasing the frequency of field blanks to at least 10% is highly recommended. Improving collection and reporting of field blank data is critical to ensure that project data can be useful for decision-making.')
 } else if (number_of_field_blanks < 0.10*no_samples) {
-  field_blank_rec <- paste0('**Field blanks** appear in the data reported to WQP at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field blanks to at least 10% of all samples collected.')
-}else if (number_of_field_blanks >= 0.10*no_samples) {
+  field_blank_rec <- paste0('**Field blanks** appear in the reported data at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). This indicates either limited collection or incomplete reporting of these important QC data to WQP. Increasing the frequency of field blanks to at least 10% is highly recommended. Improving collection and reporting of field blank data is critical to ensure that project data can be useful for decision-making.')
+} else if (number_of_field_blanks >= 0.10*no_samples) {
   field_blank_rec <- paste0('**Field blanks** represent ', round(number_of_field_blanks / no_samples*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
 rec_list$field_blank <- field_blank_rec
@@ -394,13 +396,11 @@ rec_list$blank_issues     <- paste0('**Blank performance:** ', percent_field_bla
 #| include: false
 ### recommendations based on replicate data 
 if (number_of_lab_reps == 0) {
-  lab_rep_rec <- '**Laboratory Replicates** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive reporting of laboratory replicates into WQP would enable more meaningful assessment of data quality.'
-} else if (number_of_lab_reps < no_years) {
-  lab_rep_rec <- '**Laboratory blanks** appear in the reported data at a rate of less than one lab blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. More comprehensive reporting of laboratory blanks into WQP would enable more meaningful assessment of data quality differences among datasets and laboratories.'
+  lab_rep_rec <- '**Laboratory replicates** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive reporting of laboratory replicates into WQP would enable more meaningful assessment of data quality.'
 } else if (number_of_lab_reps < 0.10*samples_for_rep_comparison) {
-  lab_rep_rec <- paste0('**Laboratory blanks** appear in the data reported to WQP, but represent just ', round(number_of_lab_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that laboratory blanks are reported comprehensively and increasing the frequency of laboratory blanks to at least 10% of lab samples.')
+  lab_rep_rec <- paste0('**Laboratory replicates** appear in the data reported to WQP, but represent just ', round(number_of_lab_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that laboratory replicates are reported comprehensively and increasing the frequency of laboratory replicates to at least 10% of lab samples.')
 } else if (number_of_lab_reps >= 0.10*samples_for_rep_comparison) {
-  lab_rep_rec <- '**Laboratory blanks** represent at least 10% of all lab samples. Project Managers are commended for their high level of effort and reporting on this quality metric.'
+  lab_rep_rec <- '**Laboratory replicates** represent at least 10% of all lab samples. Project Managers are commended for their high level of effort and reporting on this quality metric.'
 }
 rec_list$lab_rep <- lab_rep_rec
 
@@ -408,10 +408,8 @@ rec_list$lab_rep <- lab_rep_rec
 ### field reps
 if (number_of_field_reps == 0) {
   field_rep_rec <- '**Field replicates** were either not collected or not input into WQP. More comprehensive reporting of field replicates in WQX is critical for evaluating contamination and bias in the generated data.'
-} else if (number_of_field_reps < no_years) {
-  field_rep_rec <- '**Field replicates** appear in the reported data at a rate of less than one field blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. Increasing the frequency of field replicates to at least 10% is highly recommended.'
 } else if (number_of_field_reps < 0.10*samples_for_rep_comparison) {
-  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field blanks are reported comprehensively and increasing the frequency of field replicates to at least 10% of all samples.')
+  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field replicates are reported comprehensively and increasing the frequency of field replicates to at least 10% of all samples.')
 }else if (number_of_field_reps >= 0.10*samples_for_rep_comparison) {
   field_rep_rec <- paste0('**Field replicates** represent ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
@@ -453,6 +451,8 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** ', reps_pct_above2
 
 -   `r rec_list$rep_issues`
 
+
+
 ## Supporting data
 
 The following files contain the data used in this report:
@@ -473,7 +473,7 @@ downloadthis::download_file(path = blank_file,
   )
 ```
 
-\n
+\n 
 
 ```{r}
 #| echo: false
@@ -502,7 +502,8 @@ downloadthis::download_file(path = rep_file,
   icon         = "fa fa-save"
   )
 ```
-
+    
+    
 ```{r}
 #| echo: false
 #| warning: false
@@ -516,7 +517,7 @@ downloadthis::download_file(path = rep_file2,
   icon         = "fa fa-save"
   )
 ```
-
+    
 ```{r}
 #| echo: false
 #| warning: false
@@ -531,6 +532,7 @@ downloadthis::download_file(path = rep_summary_file,
   )
 ```
 
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -544,6 +546,7 @@ downloadthis::download_file(path = data_file,
   icon         = "fa fa-save"
   )
 ```
+
 
 ```{r}
 #| echo: false
