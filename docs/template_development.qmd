@@ -96,44 +96,81 @@ Map of sampling locations, list of parameters etc.
 This report focuses on a set of core physical and chemical measures common among CWA106 monitoring programs. Relevant parameters measured by `r allSummary$data$OrganizationFormalName[1]` include `r included_params`.
 
 
+
 ## Quality Control Summary
 
-### Blank values
+### Blanks
 
-Summary of blank performance by year:
 
 ```{r}
-#| echo: false
+#| eval: false
+#| include: false
 #| fig-cap: Table 1. Blank performance for each analyte in each year, based on data input into the Water Quality Portal.
 ### https://gt.albert-rapp.de/getting_started.html
 ### create cleaner sample type 
 if (nrow(allSummary$blank_proc) == 0) {
   blank_table <- data.frame('Blanks collected' = c(0))
 } else {
-  allSummary$blank_summary$`Sample Type` <- sapply(strsplit(allSummary$blank_summary$ActivityTypeCode, '-'), FUN = '[[', 2)
-allSummary$blank_summary$`Exceedances (%)` <- paste0(round(allSummary$blank_summary$exceedances / allSummary$blank_summary$n, 3)*100, '%')
-allSummary$blank_summary[, 5] <- round(allSummary$blank_summary[, 5], 3)
-names(allSummary$blank_summary)[c(3, 5:7, 9)] <- c('Analyte', 'Year', 'Blanks', 'Mean value', 'Exceedances (>MDL)')
-blank_table <- allSummary$blank_summary[, c(10, 3, 5:7, 9, 11)]
+  blank_int <- allSummary$blank_summary
+  blank_int$`Sample Type` <- sapply(strsplit(blank_int$ActivityTypeCode, '-'), FUN = '[[', 2)
+blank_int$`Above MDL (%)` <- paste0(round(blank_int$exceedances / blank_int$n, 3)*100, '%')
+blank_int[, 5] <- round(blank_int[, 5], 3)
+names(blank_int)[c(3, 5:7, 9)] <- c('Analyte', 'Year', 'Blanks', 'Mean value', 'Above MDL (no.)')
+blank_table <- blank_int[, c(10, 3, 5:7, 9, 11)]
 blank_table$`Mean value` <- sprintf("%.3f", round(blank_table$`Mean value`,3)) # keep trailing zeros
-
-allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
+# allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
 }
+# Summary of blank performance by year:
+
 gt(blank_table)
 
 ```
 
 
+
+
+
+```{r}
+#| echo: false
+if (nrow(allSummary$blank_proc) == 0) {
+  blank_table <- data.frame('Blanks collected' = c(0))
+} else {
+  blank_int <- plyr::ddply(allSummary$blank_proc, c('ActivityTypeCode', 'CharacteristicName'), plyr::summarise,
+                           `Blanks (no.)`            = length(na.omit(year)),
+                           `Years with blanks` = length(na.omit(unique(year))),
+                           `Blanks above MDL (no.)`  = sum(exceedMDL, na.rm = TRUE),
+                           `pct_above_MDL`           = sum(exceedMDL, na.rm = TRUE)/length(na.omit(exceedMDL))*100,
+                           `Blanks above MDL (%)`    = paste0(round(pct_above_MDL,0), '%')
+  )
+  ### get total samples per analyte to calculate blank ratio
+  tot_samples <- plyr::ddply(allSummary$data, c('CharacteristicName'), plyr::summarise,
+                           `Total observations`            = length(na.omit(ResultMeasureValue))
+  )
+  blank_int$`Total observations` <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% blank_int$CharacteristicName]
+  blank_freq           <- blank_int$`Blanks (no.)` / blank_int$`Total observations`*100
+  blank_int$`Blank frequency`    <- paste0(round(blank_freq, 1), '%')
+
+blank_int$`Sample Type` <- sapply(strsplit(blank_int$ActivityTypeCode, '-'), FUN = '[[', 2)
+blank_int$Analyte       <- blank_int$CharacteristicName
+blank_table             <- blank_int[, c(10, 11, 3:5, 7, 9)]
+blank_table$`Blank frequency >10%?` <- ifelse(blank_freq >= 10.0, "\u2705", "\u274C")
+blank_table$`<5% of blanks contaminated?` <- ifelse(blank_table$`Blanks above MDL (%)` <= 5.0, "\u2705", "\u274C")
+}
+```
+
 ```{r}
 #| echo: false
 #| warning: false
+#| fig-width: 8
 #| fig-cap: Figure 1. Field blank performance for each analyte over time (black). Red points indicate detection limits for each analyte during each sampling event.
 if (nrow(allSummary$blank_proc) == 0) {
  ggplot()
 } else {
+allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
+
 ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
   geom_line(linetype = 2) + geom_point() + 
-  facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
+  facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
   geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linetype = 1) +
   geom_point(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', size = 0.5) +
   labs(y = 'Blank value', x = '')
@@ -164,15 +201,15 @@ if (nrow(allSummary$blank_summary) == 0)  {
   number_field_blank_detects  <- NA
   percent_field_blank_detects <- NA
 } else {
-  number_field_blank_detects <- sum(allSummary$blank_summary[, 9][grep(x =   allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
+  number_field_blank_detects <- sum(allSummary$blank_summary$exceedances[grep(x =   allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
   
-  percent_field_blank_detects <- round(sum(allSummary$blank_summary[, 9][grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$Blanks[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
+  percent_field_blank_detects <- round(sum(allSummary$blank_summary$exceedances[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$Blanks[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
   }
 
 
 
 ### identify parameters without QC data (exclude sonde measurements)
-parameters_without_blanks <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$blank_summary$Analyte), sonde_parameters))]
+parameters_without_blanks <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$blank_summary$CharacteristicName), sonde_parameters))]
 
 if(length(parameters_without_blanks) < 1) {
  parameter_blank_message <- 'All of the laboratory parameters included in this report had some blank data.'
@@ -182,7 +219,7 @@ if(length(parameters_without_blanks) < 1) {
 
 ### identify years without QC data 
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
-years_with_blanks    <- as.numeric(unique(allSummary$blank_summary$Year))
+years_with_blanks    <- as.numeric(unique(allSummary$blank_summary$year))
 years_with_data      <- sort(as.numeric(na.omit(unique(substr(allSummary$data$ActivityStartDateTime, 1, 4)))))
 years_without_blanks <- years_with_data[!(years_with_data %in% years_with_blanks)]
 
@@ -200,6 +237,13 @@ There were `r sum(allSummary$blank_summary$Blanks, na.rm = TRUE)` lab and field 
 
 `r parameter_blank_message`
 
+
+```{r}
+#| echo: false
+#| fig-cap: Table 1. Field blank performance for each analyte. Rightmost two columns assess whether the project's blank collection rates and blank performance meet target criteria (green checks) or not (red 'X' marks).
+gt(blank_table)
+```
+
 ### Replicates
 
 <!-- `r sum(allSummary$blank_summary$Blanks, na.rm = TRUE)` lab and field blanks appeared in the dataset: `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels. -->
@@ -207,13 +251,16 @@ There were `r sum(allSummary$blank_summary$Blanks, na.rm = TRUE)` lab and field 
 ```{r}
 #| echo: false
 #| warning: false
+#| fig-width: 8
 #| label: ReplicateFigure1
 #| fig-cap: Figure 2. Replicate performance by parameter during the period of record for this report. Each point shows variation among a set of simultaneously-collected replicates, overlaid on boxplots indicating the 25th, 50th (bar), and 75th percentiles of the distribution for each parameter. Boxplot whiskers extend to the largest value up to 1.5 times the interquartile range beyond the 25th and 75th percentiles. The total number of replicate sets are indicated above each parameter. A dashed horizontal line is shown at the 20% level for reference.
 ### consider adding 95% CIs (notch = TRUE looks bad): https://stackoverflow.com/a/22200586
 ### TODO: annotate with total number from 
 rep_totals_by_param <- data.frame(table(allSummary$rep_proc$CharacteristicName))
-rep_totals_by_param$label_text <- as.character(rep_totals_by_param$Freq)
-rep_totals_by_param$label_text[1] <- paste0('n = ', rep_totals_by_param$Freq[1])
+rep_totals_by_param$tot_samples <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% as.character(rep_totals_by_param$Var1)]
+rep_totals_by_param$label_text <- paste0(as.character(rep_totals_by_param$Freq))#, 
+                                         # '\n', round(rep_totals_by_param$Freq/ rep_totals_by_param$tot_samples * 100), '%')
+rep_totals_by_param$label_text[1] <- paste0('n = ', rep_totals_by_param$label_text[1])
 
 label_location <- as.numeric(quantile(x = allSummary$rep_proc$RPD, probs = 0.95, na.rm = TRUE))
 
@@ -244,6 +291,12 @@ above20_by_param <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), pl
       `Sets with variation above 20%` = sum(RPD > 20, na.rm = TRUE),
       `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
       )
+above20_by_param$tot_samples <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% above20_by_param$CharacteristicName]
+above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
+above20_by_param$`Replicate frequency (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
+above20_by_param$`Rep frequency >10%?`       <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
+above20_by_param$`<10% of reps high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
+
 names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
 ### parameters without reps (even sonde data should be replicated)
@@ -303,8 +356,8 @@ In comparison to the 20% target level of variation, replicate performance was `r
 #| echo: false
 #| warning: false
 #| label: Table2
-#| fig-cap: Table 2. The proportion of replicates exceeding this report's 20% target for variation.
-gt(above20_by_param)
+#| fig-cap: Table 2. Summary of replicate collection rates and performance by analyte. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
+gt(above20_by_param[, c(1:4, 7:9)])
 ```
 
 Replicate variation is expected to be elevated for analytes that are not homogenous throughout the water column. This group includes *E. coli*, turbidity/total suspended solids (TSS), total Kjeldahl nitrogen (TKN), total phosphorus, and other analytes that rely on particulate fractions. This variation itself may be inconsistent over time (Figure 3), varying as a function of discharge and local in-stream deposition/erosion dynamics.
@@ -314,6 +367,7 @@ Analytes that measure dissolved quantities (temperature, DO, ions) are expected 
 ```{r}
 #| echo: false
 #| warning: false
+#| fig-width: 8
 #| fig-cap: Figure 3. Field replicate performance over time for each parameter. Note that y-axis scales vary across facets. A dashed horizontal line is shown in each facet at the 20% level for reference.
 
 allSummary$rep_proc$date <- as.POSIXct(sapply(X = strsplit(allSummary$rep_proc$id, '__'), FUN = '[[', 6), format = '%Y-%m-%d')
