@@ -69,13 +69,21 @@ create_report <- function(org = 'TURTLEMT',
     toc-location: left
     toc-title: Table of Contents
     toc-depth: 3'
+  supporting_data_text <-
+    '## Supporting data
+
+The following files contain the data used in this report:
+'
   } else if (grepl(x = output, pattern = '^docx$')) {
     replacement_text <- ' docx:
     always_allow_html: yes
     prefer-html: true'
+    supporting_data_text <- # until I learn how to embed csv files in created word docs
+      ''
   }
 
   newText    <- gsub(x = newText, pattern = 'FORMAT_INPUT', replacement = replacement_text)
+  newText    <- gsub(x = newText, pattern = 'SUPPORTING_DATA_TEXT', replacement = supporting_data_text)
 
   fileConn   <- file(newFile)
   writeLines(newText, fileConn)
