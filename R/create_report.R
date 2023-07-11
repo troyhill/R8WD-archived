@@ -8,6 +8,7 @@
 #' @param parameters parameters to use in report. Must be entered as an index of acceptable parameters listed in params$params (e.g., `parameters = c(1:4,7)`)
 #' @param extFile name of report-generating script, located in the inst/extdata folder of the R8WD R package
 #' @param prompt_user if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.
+#' @param output either 'docx' or 'html'
 #'
 #' @return Quarto markdown document
 #' @export
@@ -20,7 +21,16 @@ create_report <- function(org = 'TURTLEMT',
                           endDate   = '12-31-2022',
                           parameters = c(1:length(params$params)),
                             extFile = 'script_generateReport.qmd',
-                          prompt_user = TRUE) {
+                          prompt_user = TRUE,
+                          output = 'docx') {
+
+  ### format output
+  if(!grepl(x = tolower(output[1]), pattern = '^docx$|^html$')) {
+    stop('Acceptable output types are `html` or `docx`\n')
+  } else {
+    output <- tolower(output[1])
+  }
+
   targetFile <- system.file('extdata', extFile, package = 'R8WD')
   newFile    <- tempfile('wqp_report', fileext = '.qmd')
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
@@ -47,6 +57,25 @@ create_report <- function(org = 'TURTLEMT',
   newParams  <- paste0(paste0(gsub(x = as.character(parameters), pattern = "\'|\"", replacement = ''), collapse = ','))
   # tst <- gsub(x = readLines(targetFile), pattern = token, replacement = newParams)
   newText    <- gsub(x = newText, pattern = '\'REPLACE_PARAMS\'', replacement = newParams)
+
+  ### format as html or docx
+  if (grepl(x = output, pattern = '^html$')) {
+  replacement_text <- ' html:
+    embed-resources: true
+    smooth-scroll: true
+    theme: cosmo
+    fontcolor: black
+    toc: true
+    toc-location: left
+    toc-title: Table of Contents
+    toc-depth: 3'
+  } else if (grepl(x = output, pattern = '^docx$')) {
+    replacement_text <- ' docx:
+    always_allow_html: yes
+    prefer-html: true'
+  }
+
+  newText    <- gsub(x = newText, pattern = 'FORMAT_INPUT', replacement = replacement_text)
 
   fileConn   <- file(newFile)
   writeLines(newText, fileConn)
