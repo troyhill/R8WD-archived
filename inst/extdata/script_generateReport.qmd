@@ -445,9 +445,7 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** ', reps_pct_above2
 
 
 
-## Supporting data
-
-The following files contain the data used in this report:
+SUPPORTING_DATA_TEXT
 
 ```{r}
 #| echo: false
