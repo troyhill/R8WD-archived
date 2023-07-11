@@ -3,15 +3,7 @@ title: ""
 editor: 
   mode: source
 format: 
-  html:
-    embed-resources: true
-    smooth-scroll: true
-    theme: cosmo
-    fontcolor: black
-    toc: true
-    toc-location: left
-    toc-title: Table of Contents
-    toc-depth: 3
+FORMAT_INPUT
 ---
 
 ```{r}
@@ -72,10 +64,10 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 
 ## Water Quality Data Analysis Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
-::: {layout-ncol="2" layout-nrow="1"}
-![](`r img_path_epa`){width="150" fig-align="left"}
+::: {layout="[[25,-50, 25],]"}
+![](`r img_path_epa`)
 
-![](`r img_path`){width="150" fig-align="right"}
+![](`r img_path`)
 :::
 
 
