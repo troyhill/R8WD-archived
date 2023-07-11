@@ -10,7 +10,8 @@ create_report(
   endDate = "12-31-2022",
   parameters = c(1:length(params$params)),
   extFile = "script_generateReport.qmd",
-  prompt_user = TRUE
+  prompt_user = TRUE,
+  output = "docx"
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ create_report(
 \item{extFile}{name of report-generating script, located in the inst/extdata folder of the R8WD R package}
 
 \item{prompt_user}{if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.}
+
+\item{output}{either 'docx' or 'html'}
 }
 \value{
 Quarto markdown document
