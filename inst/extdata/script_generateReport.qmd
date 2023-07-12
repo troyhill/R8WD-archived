@@ -50,7 +50,7 @@ sonde_parameters <- c('DO', 'pH', 'Temperature', 'Turbidity', 'Specific conducti
 included_params <- paste0(unique(tribeData2$CharacteristicName), collapse = ', ')
 included_params <- sub(",([^,]*)$",", and\\1", x = included_params)
 
-params_not_found <- params$new_param[params_to_use][!(params$new_param[params_to_use] %in% unique(tribeData2$CharacteristicName))]
+params_not_found <- unique(params$new_param[params_to_use])[!(unique(params$new_param[params_to_use]) %in% unique(tribeData2$CharacteristicName))]
 if (length(params_not_found) == 0) {
   params_not_found_message <- 'Available parameters cover the entire set of core parameters sought for this report.' 
 } else if (length(params_not_found) == 1) {
@@ -93,7 +93,7 @@ The information in this report is provided on an "as is" basis and its use does 
 
 ## Introduction
 
-This report evaluates quality control data associated with a set of core physical and chemical measures common among CWA106 monitoring programs. Data used in this report were queried from the Water Quality Portal ([WQP](https://www.waterqualitydata.us/){.external target="_blank"}), which collates from a variety of sources including the EPA's Water Quality Exchange (WQX) Data Warehouse. Relevant parameters available in data from the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program include `r included_params`. 
+This report evaluates quality control data associated with a set of core physical and chemical measures common among CWA106 monitoring programs. Data used in this report were queried from the Water Quality Portal ([WQP](https://www.waterqualitydata.us/){.external target="_blank"}), which collates from a variety of sources including the EPA's Water Quality Exchange (WQX) Data Warehouse. Relevant parameters available in data from the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program include `r included_params`. `r params_not_found_message`
 
 In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as '<1 mg/L' would be treated as '0.5 mg/L'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as '>250 mg/L' would be treated as '250 mg/L'). Data users should address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}).
 
