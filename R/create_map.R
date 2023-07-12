@@ -5,7 +5,6 @@
 #' @return an interactive map of sample locations displayed as a Leaflet plot
 #' 
 #' @importFrom leaflet addLegend
-#' @importFrom leaflet addLegendCustom
 #' @importFrom leaflet colorBin
 #' @importFrom leaflet addProviderTiles
 #' @importFrom leaflet providerTileOptions
