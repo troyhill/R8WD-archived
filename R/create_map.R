@@ -12,13 +12,14 @@
 #' @importFrom leaflet clearShapes
 #' @importFrom leaflet fitBounds
 #' @importFrom leaflet addCircleMarkers
-#' @importFrom leaflet
 #' @importFrom dplyr group_by
 #' @importFrom dplyr summarise
 #' 
 #' @example 
 #' data <- getWQP(organization = "TURTLEMT", startDate = "01-01-2015", endDate = "12-31-2022)
 #' create_map(data)
+#' 
+#' @export
 
 create_map <- function(.data){
   suppressWarnings({
@@ -54,19 +55,23 @@ create_map <- function(.data){
       domain = sumdat$Parameter_Count)
     
     map = leaflet::leaflet()%>%
-      leaflet::addProviderTiles("Esri.WorldTopoMap", group = "World topo", options = leaflet::providerTileOptions(updateWhenZooming = FALSE,updateWhenIdle = TRUE))%>%
-      leaflet::clearShapes()%>% # get rid of whatever was there before if loading a second dataset
-      leaflet::fitBounds(lng1 = min(sumdat$LongitudeMeasure), lat1 = min(sumdat$LatitudeMeasure), lng2 = max(sumdat$LongitudeMeasure), lat2 = max(sumdat$LatitudeMeasure))%>% # fit to bounds of data in tadat$raw
-      leaflet::addCircleMarkers(data = sumdat, lng=~as.numeric(LongitudeMeasure), lat=~as.numeric(LatitudeMeasure), color="black",fillColor=~pal(Parameter_Count), fillOpacity = 0.7, stroke = TRUE, weight = 1.5, radius=sumdat$radius,
+      leaflet::addProviderTiles("Esri.WorldTopoMap", group = "World topo", 
+                                options = leaflet::providerTileOptions(updateWhenZooming = FALSE,updateWhenIdle = TRUE)) %>%
+      # get rid of whatever was there before if loading a second dataset
+      leaflet::clearShapes() %>%
+      # fit boundaries of the map to a relevant window
+      leaflet::fitBounds(lng1 = min(sumdat$LongitudeMeasure), lat1 = min(sumdat$LatitudeMeasure), 
+                         lng2 = max(sumdat$LongitudeMeasure), lat2 = max(sumdat$LatitudeMeasure)) %>% 
+      leaflet::addCircleMarkers(data = sumdat, lng =~ as.numeric(LongitudeMeasure), lat =~ as.numeric(LatitudeMeasure),
+                                color="black",fillColor =~ pal(Parameter_Count), fillOpacity = 0.7, 
+                                stroke = TRUE, weight = 1.5, radius=sumdat$radius,
                                 popup = paste0("Site ID: ", sumdat$MonitoringLocationIdentifier,
                                                "<br> Site Name: ", sumdat$MonitoringLocationName,
                                                "<br> Measurement Count: ", sumdat$Sample_Count,
                                                "<br> Visit Count: ", sumdat$Visit_Count,
-                                               "<br> Characteristic Count: ", sumdat$Parameter_Count))%>%
+                                               "<br> Characteristic Count: ", sumdat$Parameter_Count)) %>%
       leaflet::addLegend("bottomright", pal = pal, values =sumdat$Parameter_Count,
-                         title = "Characteristics",
-                         opacity = 0.5
-      )%>%
+                         title = "Characteristics", opacity = 0.5) %>%
       addLegendCustom(colors = "black", 
                       labels = site_legend$Sample_n, sizes = site_legend$Point_size*2)
     return(map)
