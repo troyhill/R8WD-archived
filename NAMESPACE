@@ -3,7 +3,6 @@
 export(create_map)
 export(create_report)
 export(cv)
-export(data_summary)
 export(get_pa)
 export(makeTable)
 export(preProcessResults)
