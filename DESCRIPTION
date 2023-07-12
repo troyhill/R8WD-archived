@@ -13,9 +13,9 @@ RoxygenNote: 7.2.3
 Imports: 
     httr,
     plyr,
+    gt,
     dataRetrieval
 Suggests:
-    gt,
     ggplot2,
     downloadthis
 Depends: 
