@@ -16,17 +16,17 @@ getWQP <- function(organization = Tribal_org,
                    startDate = "01-01-2015",
                    endDate   = "12-31-2022",
                    multiplier = 0.5) {
-  
+
   WQPQuery <- list(organization = organization,
                    characteristicName = characteristicName,
                    startDate = startDate,
                    endDate   = endDate)
-  
-  dat <- dataRetrieval::readWQPdata(WQPQuery)
+
+  dat    <- dataRetrieval::readWQPdata(WQPQuery)
   dat.sd <- dataRetrieval::whatWQPsites(WQPQuery)
-  
-  dat.comb <- joinWQPProfiles(dat, dat.sd)
-  
+
+  dat.comb <- R8WD::joinWQPProfiles(dat, dat.sd)
+
   dat2 <- R8WD::preProcessResults(dat.comb, multiplier = multiplier)
   invisible(dat2)
 }
