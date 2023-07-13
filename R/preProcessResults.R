@@ -28,7 +28,7 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
   n_grtr <- length(grep(x = data[, value_column], pattern = ">"))
   if ((length(n_grtr) > 0) & (n_grtr > 0)) {
     cat(n_grtr, 'values had greater-than symbols; replaced with highest measureable value\n')
-    data[, value_column][grep(x = data[, value_column], pattern = ">")] <-  gsub(x = data[, value_column][grep(x = data[, value_column], pattern = ">")], start = 2, stop = nchar( data[, value_column][grep(x = data[, value_column], pattern = ">")]))
+    data[, value_column][grep(x = data[, value_column], pattern = ">")] <-  gsub(x = data[, value_column][grep(x = data[, value_column], pattern = ">")], pattern = '>', replacement = '')
   }
   ### modify 'nm' values with NAs - 'not measured'?. This appears in WYDEQ_WATERSHED/WQX data
   n_nm <- length(grep(x = trimws(data[, value_column]), pattern = "^nm$|^NM$"))
