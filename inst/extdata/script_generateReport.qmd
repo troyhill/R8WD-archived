@@ -100,7 +100,6 @@ In preparing data for analysis, non-detects (values below detection limit) were 
 
 ::: {.content-hidden when-format="html"}
 ```{r}
-#| fig-cap: Figure 1. Map of sampling locations included in this report.
 #| echo: false
 
 # if (grepl(x = output_type, pattern = 'html')) {
@@ -129,12 +128,11 @@ In preparing data for analysis, non-detects (values below detection limit) were 
 
 ::: {.content-hidden when-format="docx"}
 ```{r}
-#| fig-cap: Figure 1. Map of sampling locations included in this report.
 #| echo: false
 create_map(tribeData2)
 ```
 :::
-
+Figure 1. Map of sampling locations included in this report.
 
 
 
