@@ -98,40 +98,40 @@ This report evaluates quality control data associated with a set of core physica
 In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as '<1 mg/L' would be treated as '0.5 mg/L'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as '>250 mg/L' would be treated as '250 mg/L'). Data users should address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). All pH data were converted from log-scale pH values to molar H^+ concentrations before any analyses were performed, and then converted back to unitless pH values for visualization and reporting.
 
 
-::: {.content-hidden when-format="html"}
-```{r}
-#| echo: false
+<!-- ::: {.content-hidden when-format="html"} -->
+<!-- ```{r} -->
+<!-- #| echo: false -->
 
-# if (grepl(x = output_type, pattern = 'html')) {
-#   create_map(tribeData2)
-# } else if (grepl(x = output_type, pattern = 'docx')) {
-  ### word-compatible figure
-  mapfile <- tempfile(fileext = '.html') # file.path(getwd(), 'test.html') #tempfile(fileext = '.png')
-  mapfile_png <- tempfile(fileext = '.png')
-  # grDevices::png(mapfile)
-  leaflet::leaflet(options = leaflet::leafletOptions(zoomSnap = 0.25, zoomDelta=0.25)) 
-  m <- leaflet::setMaxBounds(create_map(tribeData2), lng1 = -116, lat1 = 36.6, lng2 = -95.8, lat2 = 49.4)
-  m$height <- 1400
-  m$width  <- 1800
-  # grDevices::dev.off()
-  # webshot2::webshot('temp.html', file = mapfile, cliprect="viewport")
-  htmlwidgets::saveWidget(m, mapfile, selfcontained = TRUE)
-  # mapview::mapshot(m, file = mapfile, 
-  #         remove_controls = c("homeButton", "layersControl"))
-  webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport")
-# }
+<!-- # if (grepl(x = output_type, pattern = 'html')) { -->
+<!-- #   create_map(tribeData2) -->
+<!-- # } else if (grepl(x = output_type, pattern = 'docx')) { -->
+<!--   ### word-compatible figure -->
+<!--   mapfile <- tempfile(fileext = '.html') # file.path(getwd(), 'test.html') #tempfile(fileext = '.png') -->
+<!--   mapfile_png <- tempfile(fileext = '.png') -->
+<!--   # grDevices::png(mapfile) -->
+<!--   leaflet::leaflet(options = leaflet::leafletOptions(zoomSnap = 0.25, zoomDelta=0.25))  -->
+<!--   m <- leaflet::setMaxBounds(create_map(tribeData2), lng1 = -116, lat1 = 36.6, lng2 = -95.8, lat2 = 49.4) -->
+<!--   m$height <- 1400 -->
+<!--   m$width  <- 1800 -->
+<!--   # grDevices::dev.off() -->
+<!--   # webshot2::webshot('temp.html', file = mapfile, cliprect="viewport") -->
+<!--   htmlwidgets::saveWidget(m, mapfile, selfcontained = TRUE) -->
+<!--   # mapview::mapshot(m, file = mapfile,  -->
+<!--   #         remove_controls = c("homeButton", "layersControl")) -->
+<!--   webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport") -->
+<!-- # } -->
 
-```
+<!-- ``` -->
 
-:::
+<!-- ::: -->
 
 
-::: {.content-hidden when-format="docx"}
-```{r}
-#| echo: false
-create_map(tribeData2)
-```
-:::
+<!-- ::: {.content-hidden when-format="docx"} -->
+<!-- ```{r} -->
+<!-- #| echo: false -->
+<!-- create_map(tribeData2) -->
+<!-- ``` -->
+<!-- ::: -->
 Figure 1. Map of sampling locations included in this report.
 
 
