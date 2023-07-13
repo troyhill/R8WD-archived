@@ -124,8 +124,28 @@ summarizeQC <- function(data) {
     returnDat2 <- plyr::rbind.fill(list(returnDat, newDat))
   } else {
     returnDat2  <- returnDat
-    rep.summary <- NA # TODO: make these match
-    reps_all    <- NA
+    reps_all    <- data.frame(OrganizationFormalName = NA,
+                              OrganizationIdentifier = NA,
+                              MonitoringLocationIdentifier = NA,
+                              CharacteristicName = NA,
+                              ActivityTypeCode = NA,
+                              id = NA,
+                              ActivityStartDate = NA,
+                              year = NA,
+                              date = NA,
+                              n     = NA,
+                              RPD = NA,
+                              aver  = NA,
+                              MDL   = NA,
+                              MDLs_identical = NA
+                              )
+    rep.summary <- data.frame(OrganizationIdentifier = NA,
+    CharacteristicName = NA,
+    ActivityTypeCode   = NA,
+    year       = NA,
+    n          = NA,
+    RPD.median = NA,
+    RPD.IQR    = NA)
   }
 
 
