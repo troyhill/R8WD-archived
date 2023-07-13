@@ -8,7 +8,9 @@ preProcessResults(
   data,
   multiplier = 0.5,
   value_column = "ResultMeasureValue",
-  convert_ug_to_mg = TRUE
+  convert_ug_to_mg = TRUE,
+  DL_column = "DetectionQuantitationLimitMeasure.MeasureValue",
+  unit_column = "ResultMeasure.MeasureUnitCode"
 )
 }
 \arguments{
@@ -19,6 +21,10 @@ preProcessResults(
 \item{value_column}{name of the column in `data` containing values/concentrations}
 
 \item{convert_ug_to_mg}{logical; if TRUE, values with units of ug/L are converted to mg/L}
+
+\item{DL_column}{name of the column containing detection limit information}
+
+\item{unit_column}{name of column identifying units}
 }
 \value{
 dataframe
