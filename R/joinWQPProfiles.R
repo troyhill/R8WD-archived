@@ -4,33 +4,40 @@
 #'              site data with measurements to map observations with physical
 #'              sampling locations
 #'
-#' @param fullData output of query to WQP portal using readWQPdata function in
+#' @param dat.full output of query to WQP portal using readWQPdata function in
 #'        the dataRetrieval package
-#' @param sites output of query to WQP portal using whatWQPsites function in the
+#' @param dat.sites output of query to WQP portal using whatWQPdat.sites function in the
 #'        dataRetrieval package
 #'
 #' @return a combined data frame of WQP measurements with corresponding sampling
 #'         site data
+#'
+#' @importFrom dplyr left_join
+#' @importFrom dplyr rename_at
+#' @importFrom dplyr select_at
+#' @importFrom dplyr select
+#' @importFrom dplyr vars
+#' @importFrom dplyr ends_with
+#' @importFrom stringr str_replace
 #' @export
 
-joinWQPProfiles <- function(fullData = "null",
+joinWQPProfiles <- function(full = "null",
                             sites = "null"){
 
-  fullData.df <- fullData
-
-  sites.df <- sites
+  dat.full <- full
+  dat.sites <- sites
 
   # Join station data to the WQP data
-  if (length(sites.df > 1)) {
-    if (nrow(sites.df) > 0) {
-      join1 <- fullData.df %>%
+  if (length(dat.sites > 1)) {
+    if (nrow(dat.sites) > 0) {
+      join1 <- dat.full %>%
         # join stations to results
-        dplyr::left_join(sites.df, by = "MonitoringLocationIdentifier", multiple = "all") %>%
+        dplyr::left_join(dat.sites, by = "MonitoringLocationIdentifier", multiple = "all") %>%
         # remove ".x" suffix from column names
         dplyr::rename_at(dplyr::vars(dplyr::ends_with(".x")), ~ stringr::str_replace(., "\\..$", "")) %>%
         # remove columns with ".y" suffix
         dplyr::select_at(dplyr::vars(-dplyr::ends_with(".y")))
-    } else {join1 = fullData.df}
-  } else {join1 = fullData.df}
-  return (join1)
+    } else {join1 = dat.full}
+  } else {join1 = dat.full}
+  return(join1)
 }
