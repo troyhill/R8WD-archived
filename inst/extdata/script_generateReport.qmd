@@ -52,7 +52,7 @@ included_params <- sub(",([^,]*)$",", and\\1", x = included_params)
 
 params_not_found <- unique(params$new_param[params_to_use])[!(unique(params$new_param[params_to_use]) %in% unique(tribeData2$CharacteristicName))]
 if (length(params_not_found) == 0) {
-  params_not_found_message <- 'Available parameters cover the entire set of core parameters sought for this report.' 
+  params_not_found_message <- "All core parameters sought for this report were available in the organization's WQP data." 
 } else if (length(params_not_found) == 1) {
   params_not_found_message <- paste0('The only core parameter sought for this report that was not available in WQP was ', params_not_found, '. EPA recommends that data for all core parameters are collected and uploaded to WQP.')
 } else {
@@ -95,18 +95,46 @@ The information in this report is provided on an "as is" basis and its use does 
 
 This report evaluates quality control data associated with a set of core physical and chemical measures common among CWA106 monitoring programs. Data used in this report were queried from the Water Quality Portal ([WQP](https://www.waterqualitydata.us/){.external target="_blank"}), which collates from a variety of sources including the EPA's Water Quality Exchange (WQX) Data Warehouse. Relevant parameters available in data from the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program include `r included_params`. `r params_not_found_message`
 
-In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as '<1 mg/L' would be treated as '0.5 mg/L'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as '>250 mg/L' would be treated as '250 mg/L'). Data users should address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}).
+In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as '<1 mg/L' would be treated as '0.5 mg/L'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as '>250 mg/L' would be treated as '250 mg/L'). Data users should address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). All pH data were converted from log-scale pH values to molar H^+ concentrations before any analyses were performed, and then converted back to unitless pH values for visualization and reporting.
 
 
-[Map of sampling locations]
-
+::: {.content-hidden when-format="html"}
 ```{r}
 #| fig-cap: Figure 1. Map of sampling locations included in this report.
 #| echo: false
 
-
+# if (grepl(x = output_type, pattern = 'html')) {
+#   create_map(tribeData2)
+# } else if (grepl(x = output_type, pattern = 'docx')) {
+  ### word-compatible figure
+  mapfile <- tempfile(fileext = '.html') # file.path(getwd(), 'test.html') #tempfile(fileext = '.png')
+  mapfile_png <- tempfile(fileext = '.png')
+  # grDevices::png(mapfile)
+  leaflet::leaflet(options = leaflet::leafletOptions(zoomSnap = 0.25, zoomDelta=0.25)) 
+  m <- leaflet::setMaxBounds(create_map(tribeData2), lng1 = -116, lat1 = 36.6, lng2 = -95.8, lat2 = 49.4)
+  m$height <- 1400
+  m$width  <- 1800
+  # grDevices::dev.off()
+  # webshot2::webshot('temp.html', file = mapfile, cliprect="viewport")
+  htmlwidgets::saveWidget(m, mapfile, selfcontained = TRUE)
+  # mapview::mapshot(m, file = mapfile, 
+  #         remove_controls = c("homeButton", "layersControl"))
+  webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport")
+# }
 
 ```
+
+:::
+
+
+::: {.content-hidden when-format="docx"}
+```{r}
+#| fig-cap: Figure 1. Map of sampling locations included in this report.
+#| echo: false
+create_map(tribeData2)
+```
+:::
+
 
 
 
@@ -241,7 +269,7 @@ if(length(years_without_blanks) < 1) {
 
 ```
 
-There were `r sum(allSummary$blank_summary$Blanks, na.rm = TRUE)` lab and field blanks collected during the period of interest. This total number is composed of `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels.
+There were `r sum(allSummary$blank_summary$n, na.rm = TRUE)` lab and field blanks collected during the period of interest. This total number is composed of `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels.
 
 `r year_blank_message`
 
@@ -521,6 +549,9 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** Overall, ', reps_p
 -   `r rec_list$rep_freq_param` `r if(!is.null(TN_note)) TN_note`
 
 -   `r rec_list$rep_issues`
+
+
+
 
 
 
