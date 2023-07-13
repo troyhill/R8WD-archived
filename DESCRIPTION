@@ -19,7 +19,9 @@ Imports:
     gt,
     leaflet,
     ggplot2,
-    downloadthis
+    downloadthis,
+    htmlwidgets,
+    webshot2
 Suggests:
 Depends: 
     R (>= 3.5.0)
