@@ -50,77 +50,85 @@ summarizeQC <- function(data) {
   ###
   tmpDat           <- tmpDat[order(tmpDat$OrganizationFormalName, tmpDat$ActivityStartDate, tmpDat$MonitoringLocationIdentifier, tmpDat$CharacteristicName), ]
 
-  ### determine whether to use RPD or CV (are all reps pairs or are there cases with n>2?)
-  largest_replicate_set <- max(table(tmpDat$id))
-  ### These may be duplicate entries? Everything is identical, including the values:
-  # tst <- data[!grepl(x = data$ActivityTypeCode, pattern = 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
-  # tst$id <- paste0(tst$OrganizationFormalName,"__", tst$OrganizationIdentifier, '__', tst$MonitoringLocationIdentifier, "__", tst$CharacteristicName, "__", tst$ActivityDepthHeightMeasure.MeasureValue, "__",tst$ActivityStartDate)
-  # tst[grep(x = tst$id, pattern = 'Turtle Mountain Environmental Office__TURTLEMT__TURTLEMT-WHEATBEACH__E_coli__NA__2018-07-31'), ]
-  ### ISSUE: FUN not found in local environment
-  if (largest_replicate_set == 2) {
-    fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'ActivityStartDate', 'year'),
-                                         # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
-                                         plyr::summarize,
-                                         n     = sum(!is.na(as.numeric(ResultMeasureValue))),
-                                         RPD   = rpd(as.numeric(ResultMeasureValue)),
-                                         aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
-                                         MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE),
-                                         MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
-                                         ) # ,
-    variation_measure <- 'Relative Percent Difference'
-    # n = sum(!is.na(as.numeric(ResultMeasureValue)))) # zeroes = reps were identical. Suggestive of raw data not being included
-  } else if (largest_replicate_set > 2) {
-    fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id',  'ActivityStartDate', 'year'),
-                                         # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
-                                         plyr::summarize,
-                                         n     = sum(!is.na(as.numeric(ResultMeasureValue))),
-                                         RPD   = cv(as.numeric(ResultMeasureValue)),
-                                         aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
-                                         MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE),
-                                         MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
-    )
-    variation_measure <- 'Coefficient of Variation'
-  }
-  message('Replicate sets had a maximum n = ', largest_replicate_set,'; ', variation_measure, ' used as variation measure.')
-
-  # fieldReps_proc_mean   <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year') ,
-  #                                      plyr::summarize,
-  #                                      aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
-  #                                      MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE), # TODO: note if MDLs are not identical. For now, conservative behavior seems like reporting the highest MDL
-  #                                      n     = sum(!is.na(as.numeric(ResultMeasureValue))),
-  #                                      MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
-  #                                      )
-  # reps_all    <- plyr::join_all(list(fieldReps_proc_tmp, fieldReps_proc_mean), by = c('OrganizationFormalName', 'OrganizationIdentifier', 'year',  'CharacteristicName', 'ActivityTypeCode', 'id'))
-  reps_all    <- fieldReps_proc_tmp[order(fieldReps_proc_tmp$OrganizationFormalName, fieldReps_proc_tmp$ActivityStartDate, fieldReps_proc_tmp$MonitoringLocationIdentifier, fieldReps_proc_tmp$CharacteristicName), ]
-
-  ### summarize rep performance by Tribe, analyte, year
-  rep.summary <- plyr::ddply(reps_all, c('OrganizationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'year'),
-                             plyr::summarize,
-                             n          = sum(!is.na(aver)),
-                             RPD.median = median(RPD, na.rm = TRUE),
-                             RPD.IQR    = IQR(RPD, na.rm = TRUE)
-  )
-  rep.summary$variation_measure <- variation_measure
-  ### tmpDat[tmpDat$id == reps_all$id[2], ] # strange
-  ### todo: resolve warnings appropriately
-  # Warning messages:
-  #   1: In diff(x, na.rm = TRUE) : NAs introduced by coercion
-
   ### Create dataset with averaged reps instead of both reps (double-counting in any stats)
   returnDat <- data[which(!duplicated(indicator_vector)), ]
-  # confirm reps removed
-  # indicator_vector2 <- paste0(returnDat$OrganizationIdentifier,"-", returnDat$MonitoringLocationIdentifier, "-", returnDat$CharacteristicName, "-", returnDat$ActivityStartDate)
-  # any(duplicated(indicator_vector2))
-  ### remove rep values (lose a lot of columns; this could be improved)
-  ### rename and join data
-  newDat        <- as.data.frame(do.call('rbind', strsplit(as.character(reps_all$id),'__',fixed=TRUE)))
-  names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityDepthHeightMeasure.MeasureValue', 'ActivityStartDate')
-  newDat$ResultValueMeasure <- reps_all$aver
-  newDat$DetectionQuantitationLimitMeasure.MeasureValue <- reps_all$MDL
-  newDat$ActivityStartDate <- as.Date(newDat$ActivityStartDate, format = '%Y-%m-%d')
-  # newDat$units
 
-  returnDat2 <- plyr::rbind.fill(list(returnDat, newDat))
+
+  ### determine whether to use RPD or CV (are all reps pairs or are there cases with n>2?)
+  if (nrow(tmpDat) > 0) {
+    largest_replicate_set <- max(table(tmpDat$id))
+    ### These may be duplicate entries? Everything is identical, including the values:
+    # tst <- data[!grepl(x = data$ActivityTypeCode, pattern = 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
+    # tst$id <- paste0(tst$OrganizationFormalName,"__", tst$OrganizationIdentifier, '__', tst$MonitoringLocationIdentifier, "__", tst$CharacteristicName, "__", tst$ActivityDepthHeightMeasure.MeasureValue, "__",tst$ActivityStartDate)
+    # tst[grep(x = tst$id, pattern = 'Turtle Mountain Environmental Office__TURTLEMT__TURTLEMT-WHEATBEACH__E_coli__NA__2018-07-31'), ]
+    ### ISSUE: FUN not found in local environment
+    if (largest_replicate_set == 2) {
+      fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'ActivityStartDate', 'year'),
+                                           # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
+                                           plyr::summarize,
+                                           n     = sum(!is.na(as.numeric(ResultMeasureValue))),
+                                           RPD   = rpd(as.numeric(ResultMeasureValue)),
+                                           aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
+                                           MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE),
+                                           MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
+      ) # ,
+      variation_measure <- 'Relative Percent Difference'
+      # n = sum(!is.na(as.numeric(ResultMeasureValue)))) # zeroes = reps were identical. Suggestive of raw data not being included
+    } else if (largest_replicate_set > 2) {
+      fieldReps_proc_tmp    <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id',  'ActivityStartDate', 'year'),
+                                           # .fun = function(ResultMeasureValue) {FUN(as.numeric(ResultMeasureValue))})
+                                           plyr::summarize,
+                                           n     = sum(!is.na(as.numeric(ResultMeasureValue))),
+                                           RPD   = cv(as.numeric(ResultMeasureValue)),
+                                           aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
+                                           MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE),
+                                           MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
+      )
+      variation_measure <- 'Coefficient of Variation'
+    }
+    message('Replicate sets had a maximum n = ', largest_replicate_set,'; ', variation_measure, ' used as variation measure.')
+
+    # fieldReps_proc_mean   <- plyr::ddply(tmpDat, c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'id', 'year') ,
+    #                                      plyr::summarize,
+    #                                      aver  = mean(as.numeric(ResultMeasureValue), na.rm = TRUE),
+    #                                      MDL   = mean(DetectionQuantitationLimitMeasure.MeasureValue, na.rm = TRUE), # TODO: note if MDLs are not identical. For now, conservative behavior seems like reporting the highest MDL
+    #                                      n     = sum(!is.na(as.numeric(ResultMeasureValue))),
+    #                                      MDLs_identical = as.logical(sd(na.omit(DetectionQuantitationLimitMeasure.MeasureValue)) == 0)
+    #                                      )
+    # reps_all    <- plyr::join_all(list(fieldReps_proc_tmp, fieldReps_proc_mean), by = c('OrganizationFormalName', 'OrganizationIdentifier', 'year',  'CharacteristicName', 'ActivityTypeCode', 'id'))
+    reps_all    <- fieldReps_proc_tmp[order(fieldReps_proc_tmp$OrganizationFormalName, fieldReps_proc_tmp$ActivityStartDate, fieldReps_proc_tmp$MonitoringLocationIdentifier, fieldReps_proc_tmp$CharacteristicName), ]
+
+    ### summarize rep performance by Tribe, analyte, year
+    rep.summary <- plyr::ddply(reps_all, c('OrganizationIdentifier', 'CharacteristicName', 'ActivityTypeCode', 'year'),
+                               plyr::summarize,
+                               n          = sum(!is.na(aver)),
+                               RPD.median = median(RPD, na.rm = TRUE),
+                               RPD.IQR    = IQR(RPD, na.rm = TRUE)
+    )
+    rep.summary$variation_measure <- variation_measure
+    ### tmpDat[tmpDat$id == reps_all$id[2], ] # strange
+    ### todo: resolve warnings appropriately
+    # Warning messages:
+    #   1: In diff(x, na.rm = TRUE) : NAs introduced by coercion
+    # confirm reps removed
+    # indicator_vector2 <- paste0(returnDat$OrganizationIdentifier,"-", returnDat$MonitoringLocationIdentifier, "-", returnDat$CharacteristicName, "-", returnDat$ActivityStartDate)
+    # any(duplicated(indicator_vector2))
+    ### remove rep values (lose a lot of columns; this could be improved)
+    ### rename and join data
+    newDat        <- as.data.frame(do.call('rbind', strsplit(as.character(reps_all$id),'__',fixed=TRUE)))
+    names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityDepthHeightMeasure.MeasureValue', 'ActivityStartDate')
+    newDat$ResultValueMeasure <- reps_all$aver
+    newDat$DetectionQuantitationLimitMeasure.MeasureValue <- reps_all$MDL
+    newDat$ActivityStartDate <- as.Date(newDat$ActivityStartDate, format = '%Y-%m-%d')
+    # newDat$units
+    returnDat2 <- plyr::rbind.fill(list(returnDat, newDat))
+  } else {
+    returnDat2  <- returnDat
+    rep.summary <- NA # TODO: make these match
+    reps_all    <- NA
+  }
+
+
   # nrow(returnDat2) == nrow(returnDat)+nrow(newDat) # should be TRUE
   ### remove blanks and all other QC data
   returnDat2 <- returnDat2[!grepl(x = returnDat2$ActivityTypeCode, pattern = 'Quality Control Sample'), ] # 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
@@ -152,7 +160,7 @@ summarizeQC <- function(data) {
   if (length(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]) > 0) blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]   <- -log10(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')])
   if (length(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')]) > 0) returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')]   <- -log10(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')])
   if (length(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]) > 0)     tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]           <- -log10(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')])
-  if (length(reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')]) > 0) {
+  if (!all(is.na(reps_all)) && (length(reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')]) > 0)) { # if there are reps and they include pH
     reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')] <- -log10(reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')])
     }
 
