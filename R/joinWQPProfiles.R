@@ -19,6 +19,7 @@
 #' @importFrom dplyr vars
 #' @importFrom dplyr ends_with
 #' @importFrom stringr str_replace
+#' @export
 
 joinWQPProfiles <- function(full = "null",
                             sites = "null"){
