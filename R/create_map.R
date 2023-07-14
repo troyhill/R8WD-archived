@@ -14,14 +14,6 @@
 #' @importFrom dplyr group_by
 #' @importFrom dplyr summarise
 #'
-#' @examples {
-#' \dontrun{
-#' data <- getWQP(organization = \"TURTLEMT\", startDate = \"01-01-2015\",
-#' endDate = \"12-31-2022\")
-#' create_map(data)
-#' }
-#' }
-#'
 #' @export
 
 create_map <- function(.data){
@@ -40,7 +32,11 @@ create_map <- function(.data){
     site_size = data.frame(Sample_n = c("<9",">10",">50",">100",">200",">500",">1500"),
                            Point_size = c(3,5,8,10,15,20,30))
 
-    sumdat = .data %>% dplyr::group_by(MonitoringLocationIdentifier, MonitoringLocationName, LatitudeMeasure, LongitudeMeasure) %>%
+    removed.sd <- .data %>%
+      filter(is.na(HUCEightDigitCode)) 
+    sumdat = .data %>%
+      filter(!(is.na(HUCEightDigitCode))) %>%
+      dplyr::group_by(MonitoringLocationIdentifier, MonitoringLocationName, LatitudeMeasure, LongitudeMeasure) %>%
       dplyr::summarise("Sample_Count" = length(unique(ActivityIdentifier)), "Visit_Count" = length(unique(ActivityStartDate)),
                        "Parameter_Count" = length(unique(CharacteristicName)), "Organization_Count" = length(unique(OrganizationIdentifier)))
     sumdat$radius = 3
