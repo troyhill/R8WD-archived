@@ -33,6 +33,9 @@ tribeData2 <- getWQP(
        endDate            = end_date,
        multiplier         = 0.5)
 
+### preserve original CharacteristicName
+tribeData2$CharacteristicName_original <- tribeData2$CharacteristicName
+
 ### homogenize parameter names
 tribeData2$CharacteristicName <- params$new_param[match(tribeData2$CharacteristicName, params$params)]
 ### homogenize organization names.
@@ -109,8 +112,9 @@ In preparing data for analysis, non-detects (values below detection limit) were 
 <!--   mapfile <- tempfile(fileext = '.html') # file.path(getwd(), 'test.html') #tempfile(fileext = '.png') -->
 <!--   mapfile_png <- tempfile(fileext = '.png') -->
 <!--   # grDevices::png(mapfile) -->
-<!--   leaflet::leaflet(options = leaflet::leafletOptions(zoomSnap = 0.25, zoomDelta=0.25))  -->
-<!--   m <- leaflet::setMaxBounds(create_map(tribeData2), lng1 = -116, lat1 = 36.6, lng2 = -95.8, lat2 = 49.4) -->
+<!--   # leaflet::leaflet(options = leaflet::leafletOptions(zoomSnap = 0.25, zoomDelta=0.25))  -->
+<!--   m <- create_map(tribeData2) -->
+<!--   m <- leaflet::fitBounds(m, lng1 = -116, lat1 = 36.6, lng2 = -95.8, lat2 = 49.4) -->
 <!--   m$height <- 1400 -->
 <!--   m$width  <- 1800 -->
 <!--   # grDevices::dev.off() -->
@@ -123,15 +127,15 @@ In preparing data for analysis, non-detects (values below detection limit) were 
 
 <!-- ``` -->
 
-<!-- ::: -->
+:::
 
 
-<!-- ::: {.content-hidden when-format="docx"} -->
-<!-- ```{r} -->
-<!-- #| echo: false -->
-<!-- create_map(tribeData2) -->
-<!-- ``` -->
-<!-- ::: -->
+::: {.content-hidden when-format="docx"}
+```{r}
+#| echo: false
+create_map(tribeData2)
+```
+:::
 Figure 1. Map of sampling locations included in this report.
 
 
@@ -168,6 +172,12 @@ gt(blank_table)
 
 ```{r}
 #| echo: false
+
+### get total samples per analyte to calculate blank ratio
+tot_samples <- plyr::ddply(allSummary$data, c('CharacteristicName'), plyr::summarise,
+                           `Total observations`            = length(na.omit(ResultMeasureValue))
+  )
+
 if (nrow(allSummary$blank_proc) == 0) {
   blank_table <- data.frame('Blanks collected' = c(0))
 } else {
@@ -178,10 +188,7 @@ if (nrow(allSummary$blank_proc) == 0) {
                            `pct_above_MDL`           = sum(exceedMDL, na.rm = TRUE)/length(na.omit(exceedMDL))*100,
                            `Blanks above MDL (%)`    = paste0(round(pct_above_MDL,0), '%')
   )
-  ### get total samples per analyte to calculate blank ratio
-  tot_samples <- plyr::ddply(allSummary$data, c('CharacteristicName'), plyr::summarise,
-                           `Total observations`            = length(na.omit(ResultMeasureValue))
-  )
+  
   blank_int$`Total observations` <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% blank_int$CharacteristicName]
   blank_freq           <- blank_int$`Blanks (no.)` / blank_int$`Total observations`*100
   blank_int$`Blank frequency`    <- paste0(round(blank_freq, 1), '%')
@@ -360,6 +367,17 @@ rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_
 #| warning: false
 #| fig-width: 8
 #| fig-cap: Figure 3. Replicate performance by parameter during the period of record for this report. Each point shows variation among a set of simultaneously-collected replicates, overlaid on boxplots indicating the 25th, 50th (bar), and 75th percentiles of the distribution for each parameter. Boxplot whiskers extend to the largest value up to 1.5 times the interquartile range beyond the 25th and 75th percentiles. The total number of replicate sets are indicated above each parameter. A dashed horizontal line is shown at the 20% level for reference.
+
+### Replicate sets above 20% variation, by parameter
+### can split this into field vs. lab in future if orgs report lab reps
+above20_by_param <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), plyr::summarize,
+      `Number of replicate sets`       = sum(!is.na(RPD)),
+      `Sets with variation above 20%` = sum(RPD > 20, na.rm = TRUE),
+      `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
+      )
+
+
+if (any(!is.na(allSummary$rep_proc$RPD))) {
 ### consider adding 95% CIs (notch = TRUE looks bad): https://stackoverflow.com/a/22200586
 ### TODO: annotate with total number from 
 rep_totals_by_param <- data.frame(table(allSummary$rep_proc$CharacteristicName))
@@ -370,7 +388,7 @@ rep_totals_by_param$label_text[1] <- paste0('n = ', rep_totals_by_param$label_te
 
 label_location <- as.numeric(quantile(x = allSummary$rep_proc$RPD, probs = 0.95, na.rm = TRUE))
 
-ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = CharacteristicName, y = RPD)) +
+fig3 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = CharacteristicName, y = RPD)) +
   geom_boxplot(outlier.shape = NA) + theme_bw() + #  theme(axis.text.x=element_blank())
   ylab(allSummary$rep_summary$variation_measure[1]) + xlab('') + scale_y_continuous(labels = function(x) paste0(x, "%")) +  
   geom_jitter(width=0.2, size=2, alpha = 0.2) +
@@ -383,27 +401,26 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
   ) +
   geom_hline(yintercept = 20, linetype = 2)
 
+above20_by_param$tot_samples               <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% above20_by_param$CharacteristicName]
+above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
+above20_by_param$`Replicate frequency (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
+above20_by_param$`Replicate frequency >10%?`        <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
+above20_by_param$`Are <10% of reps high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
+} else {
+  fig3 <- ggplot() + ggtitle('No replicates reported')
+  above20_by_param$tot_samples               <- NA
+  above20_by_param$rep_freq                  <- NA
+  above20_by_param$`Replicate frequency (%)` <- NA
+  above20_by_param$`Replicate frequency >10%?`        <- "\u274C"
+  above20_by_param$`Are <10% of reps high-variation?` <- "\u274C"
+}
+names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
 ### number of field and lab reps
 total_reps <- sum(allSummary$rep_summary$n, na.rm = TRUE)
 number_of_field_reps <- sum(allSummary$rep_summary$n[grep(x = allSummary$rep_summary$ActivityTypeCode, pattern = 'Field')], na.rm = TRUE)
 number_of_lab_reps   <- sum(allSummary$rep_summary$n[grep(x = allSummary$rep_summary$ActivityTypeCode, pattern = 'Lab')], na.rm = TRUE)
 samples_for_rep_comparison <- sum(!is.na(allSummary$data$ResultMeasureValue[allSummary$data$CharacteristicName %in% allSummary$rep_summary$CharacteristicName])) # only use params that have field or lab reps
-
-### Replicate sets above 20% variation, by parameter
-### can split this into field vs. lab in future if orgs report lab reps
-above20_by_param <- plyr::ddply(allSummary$rep_proc, c('CharacteristicName'), plyr::summarize,
-      `Number of replicate sets`       = sum(!is.na(RPD)),
-      `Sets with variation above 20%` = sum(RPD > 20, na.rm = TRUE),
-      `Proportion above 20%`     = paste0(round(100*(sum(RPD > 20, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
-      )
-above20_by_param$tot_samples <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% above20_by_param$CharacteristicName]
-above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
-above20_by_param$`Replicate frequency (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
-above20_by_param$`Replicate frequency >10%?`       <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
-above20_by_param$`Are <10% of reps high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
-
-names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
 ### parameters without reps (even sonde data should be replicated)
 parameters_without_reps <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$rep_summary$CharacteristicName)))]
@@ -446,6 +463,7 @@ variation_measure_message <- ifelse(allSummary$rep_summary$variation_measure[1] 
                                     paste0('Some replicates sets included as many as ', max(table(allSummary$rep_raw$id)), ' individual replicates. This could indicate errors during data entry into WQP, or it may reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.'), 
                                     'Replicate sets contained a maximum of two individual samples, and so the relative percent difference (RPD) was used as the measure of variation among replicates. Lower RPDs indicate lower levels of variation among replicates.')
 
+fig3
 ```
 
 Over the period of record used for this report, `r allSummary$data$OrganizationFormalName[1]` collected `r total_reps` sets of replicates. This combined total includes `r number_of_field_reps` field replicates and `r number_of_lab_reps` lab replicates. Field replicates comprised `r round(number_of_field_reps/ samples_for_rep_comparison*100)`% of all samples.
@@ -475,7 +493,9 @@ Analytes that measure dissolved quantities (temperature, DO, ions) are expected 
 #| warning: false
 #| fig-width: 8
 #| fig-cap: Figure 4. Field replicate performance over time for each parameter. Note that y-axis scales vary across facets. A dashed horizontal line is shown in each facet at the 20% level for reference.
-
+if (!any(complete.cases(allSummary$rep_proc))) {
+  ggplot() + ggtitle('No replicates reported')
+} else {
 allSummary$rep_proc$date <- as.POSIXct(sapply(X = strsplit(allSummary$rep_proc$id, '__'), FUN = '[[', 6), format = '%Y-%m-%d')
 
 ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = date, y = RPD)) +
@@ -483,6 +503,7 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
   geom_hline(yintercept = 20, linetype = 3) +
   labs(y = allSummary$rep_summary$variation_measure[1], x = '') # '(\u00b11SD)'
+}
 
 ```
 
@@ -525,16 +546,18 @@ if ((length(parameters_without_reps) == 0)) {
 }
 
 ### replicate performance and possible sample handling issues
-if(reps_pct_above20 <= 10) {
-  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling.'
+if(is.na(reps_pct_above20)) {
+  rep_issues <- paste0('Replicates were not reported, and thus it is not possible to evaluate replicate performance or the quality of the ', allSummary$data$OrganizationFormalName[1], ' data appearing in WQP.')
+} else if(reps_pct_above20 <= 10) {
+  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling. See Table 2 and Figure 4 for parameter-specific performance and to identify specific areas for improvement.'
 } else {
-  rep_issues <- 'This level of imprecision suggests examining opportunities for improved consistency and attention to detail during sample collection and handling. Increasing the frequency of replicates is recommended to help identify the underlying issues.'
+  rep_issues <- 'This level of imprecision suggests examining opportunities for improved consistency and attention to detail during sample collection and handling. Increasing the frequency of replicates is recommended to help identify the underlying issues. See Table 2 and Figure 4 for parameter-specific performance and to identify specific areas for improvement.'
 }
 
 
 rec_list$rep_freq_time  <- rep_collection_consistency_time
 rec_list$rep_freq_param <- rep_collection_consistency_param
-rec_list$rep_issues     <- paste0('**Replicate performance:** Overall, ', reps_pct_above20, '% of replicates had problematic levels of imprecision. ' , rep_issues, ' See Table 2 and Figure 4 for parameter-specific performance and to identify specific areas for improvement.')
+rec_list$rep_issues     <- paste0('**Replicate performance:** Overall, ', reps_pct_above20, '% of replicates had problematic levels of imprecision. ' , rep_issues)
 
 ```
 
@@ -547,7 +570,6 @@ rec_list$rep_issues     <- paste0('**Replicate performance:** Overall, ', reps_p
 -   `r rec_list$rep_freq_param` `r if(!is.null(TN_note)) TN_note`
 
 -   `r rec_list$rep_issues`
-
 
 
 
