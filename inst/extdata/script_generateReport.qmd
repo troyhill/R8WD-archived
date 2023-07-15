@@ -13,6 +13,8 @@ library(downloadthis)
 library(plyr)
 library(gt)
 library(dataRetrieval)
+# library(webshot2) # for export
+# library(htmlwidgets)
 library(R8WD)
 
 Tribal_org    <- c('REPLACE_THIS_TEXT')
@@ -57,11 +59,11 @@ params_not_found <- unique(params$new_param[params_to_use])[!(unique(params$new_
 if (length(params_not_found) == 0) {
   params_not_found_message <- "All core parameters sought for this report were available in the organization's WQP data." 
 } else if (length(params_not_found) == 1) {
-  params_not_found_message <- paste0('The only core parameter sought for this report that was not available in WQP was ', params_not_found, '. EPA recommends that data for all core parameters are collected and uploaded to WQP.')
+  params_not_found_message <- paste0('**The only core parameter sought for this report that was not available was ', params_not_found, '. EPA recommends that data for all core parameters are collected and uploaded to WQP.**')
 } else {
   params_not_found <- paste0(params_not_found, collapse = ', ')
   params_not_found <- sub(",([^,]*)$",", and\\1", x = params_not_found)
-  params_not_found_message <- paste0('The core parameters sought for this report that were not available in WQP were ', params_not_found, '. EPA recommends that data for all core parameters are collected and uploaded to WQP.')
+  params_not_found_message <- paste0('**The core parameters sought for this report that were not available were ', params_not_found, '. EPA recommends that data for all core parameters are collected and uploaded to WQP.**')
 }
 ```
 
@@ -82,7 +84,7 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 
 ## Quality Control Data Assessment Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
-::: {layout="[[25,-50, 25],]"}
+::: {layout="[[25,-30, 25],]"}
 ![](`r img_path_epa`)
 
 ![](`r img_path`)
@@ -96,15 +98,69 @@ The information in this report is provided on an "as is" basis and its use does 
 
 ## Introduction
 
-This report evaluates quality control data associated with a set of core physical and chemical measures common among CWA106 monitoring programs. Data used in this report were queried from the Water Quality Portal ([WQP](https://www.waterqualitydata.us/){.external target="_blank"}), which collates from a variety of sources including the EPA's Water Quality Exchange (WQX) Data Warehouse. Relevant parameters available in data from the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program include `r included_params`. `r params_not_found_message`
+EPA-funded water quality monitoring programs should enable data-driven decisions about the protection and conservation of water resources. If water quality data are to be useful for decision-making, they must be of known and documented quality. The limitations of a dataset must be clear to current and future users who may have to defend their decisions or conduct new analyses requiring independent evaluation of previously-collected data. Quality control data are essential determinants of whether data can be used to inform actions or generate insights.
 
-In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as '<1 mg/L' would be treated as '0.5 mg/L'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as '>250 mg/L' would be treated as '250 mg/L'). Data users should address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). All pH data were converted from log-scale pH values to molar H^+ concentrations before any analyses were performed, and then converted back to unitless pH values for visualization and reporting.
+
+### The Dataset
+
+```{r}
+#| echo: false
+obs_dist <- as.numeric(table(allSummary$data$MonitoringLocationIdentifier[!is.na(allSummary$data$ResultMeasureValue)]))
+
+newDat      <- allSummary$data[!is.na(allSummary$data$ResultMeasureValue), ]
+newDat$year <- as.numeric(substr(newDat$ActivityStartDate, 1, 4))
+params_per_site <- ddply(newDat[, c('CharacteristicName', 'ResultMeasureValue', 'ActivityStartDate', 'MonitoringLocationIdentifier', 'year')], 
+                         c('MonitoringLocationIdentifier', 'year'), summarise, 
+                         `Unique parameters per site` = length(unique(CharacteristicName)), 
+                         `Sampling events per site`   = length(unique(ActivityStartDate)),
+                         `Data points per site`       = sum(!is.na(ResultMeasureValue)))
+obs_per_yr <- ddply(newDat[, c('CharacteristicName', 'ResultMeasureValue', 'ActivityStartDate', 'MonitoringLocationIdentifier', 'year')], 
+                         c('year'), summarise, 
+                    `Parameters measured`  = length(unique(CharacteristicName)), 
+                    `Sites`                = length(unique(MonitoringLocationIdentifier)), 
+                    `Sampling events`      = length(unique(ActivityStartDate)),
+                    `Data points per year` = sum(!is.na(ResultMeasureValue)))
+obs_per_yr$label_text    <- paste0(obs_per_yr$Sites)
+obs_per_yr$label_text[1] <- paste0('Sites sampled =\n', obs_per_yr$label_text[1])
+label_location <- as.numeric(quantile(x = params_per_site$`Data points per site`, probs = 0.98, na.rm = TRUE))
+
+# allSummary$data[grepl(x = allSummary$data$MonitoringLocationIdentifier, pattern =
+# 'SRSTEPA-SW-FD-2017-01'), c('CharacteristicName', 'ResultMeasureValue', 'ActivityStartDate', 'MonitoringLocationIdentifier')]
+param_plot <- ggplot(params_per_site, aes(y = `Data points per site`, x = year, group = year)) + geom_boxplot(outlier.shape = NA) + geom_jitter(width = 0.15, alpha = 0.35) + theme_bw() + xlab('') +
+  scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + 
+  geom_text(data = obs_per_yr,
+    aes(x = year, y = label_location,label = label_text),
+    vjust = -0.5, size = 4, stat = "identity"
+  ) 
+
+
+### repeat first year's data if there's only one year. 
+### TODO: modify this behavior, maybe form the whole sentence here
+nval <- 1
+if (nrow(obs_per_yr) > 1) {
+  nval <- 2
+}
+min_obs_per_yr  <- min(obs_per_yr$`Data points per year`)
+min_obs_yr      <- obs_per_yr$year[which.min(obs_per_yr$`Data points per year`)]
+min_obs_per_yr2 <- head(tail(sort(obs_per_yr$`Data points per year`, decreasing = T), nval),1)
+min_obs_yr2     <- obs_per_yr$year[which(obs_per_yr$`Data points per year` == head(tail(sort(obs_per_yr$`Data points per year`, decreasing = T), nval),1))]
+max_obs_per_yr  <- max(obs_per_yr$`Data points per year`)
+max_obs_yr      <- obs_per_yr$year[which.max(obs_per_yr$`Data points per year`)]
+
+```
+
+This report evaluates quality control data associated with a set of core physical and chemical measures common among CWA106 monitoring programs. Data used in this report were queried from the Water Quality Portal ([WQP](https://www.waterqualitydata.us/){.external target="_blank"}), which collates data from a variety of sources including the EPA's Water Quality Exchange (WQX) Data Warehouse. Core parameters available in data from the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program included `r included_params`. 
+
+`r params_not_found_message`
+
+The data in this report draw from  `r sum(!is.na(unique(allSummary$data$MonitoringLocationIdentifier)))` sampling locations (Fig. 1). These locations had between `r round(min(obs_dist))` and `r round(max(obs_dist))` (median: `r round(median(obs_dist))`) total data points collected during the `r  suppressWarnings(length(unique(na.omit(format(allSummary$data$ActivityStartDate, '%Y')))))` years of sampling activity between `r paste0(x = range(suppressWarnings(as.numeric(unique(na.omit(format(allSummary$data$ActivityStartDate, '%Y')))))), collapse = ' and ')`. 
+
+The volume of data generated by this project varied over time, as shown in Figure 2. The least data was collected in `r min_obs_yr` (`r min_obs_per_yr` total observations across all sites and sampling dates) and `r  min_obs_yr` (`r min_obs_per_yr` observations). The most intense year of data collection was `r max_obs_yr` (`r max_obs_per_yr` observations). 
 
 
 <!-- ::: {.content-hidden when-format="html"} -->
 <!-- ```{r} -->
 <!-- #| echo: false -->
-
 <!-- # if (grepl(x = output_type, pattern = 'html')) { -->
 <!-- #   create_map(tribeData2) -->
 <!-- # } else if (grepl(x = output_type, pattern = 'docx')) { -->
@@ -124,10 +180,8 @@ In preparing data for analysis, non-detects (values below detection limit) were 
 <!--   #         remove_controls = c("homeButton", "layersControl")) -->
 <!--   webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport") -->
 <!-- # } -->
-
 <!-- ``` -->
-
-:::
+<!-- ::: -->
 
 
 ::: {.content-hidden when-format="docx"}
@@ -141,8 +195,40 @@ Figure 1. Map of sampling locations included in this report.
 
 
 
+```{r}
+#| echo: false
+#| fig-width: 8
+#| fig-cap: Figure 2. Boxplots showing the distribution of observations collected at each sampling site and year. Jittered points show the underlying data; each point indicates the number of observations generated at an individual site in a given year. The number of sites sampled in each year is indicated.
+param_plot
+```
+
+
+### Data preparation
+
+In preparing data for analysis, non-detects (values below detection limit) were treated numerically as half of the reported detection limit (e.g., a value reported as \'<1 mg`r "\U22C5"`L^-1^\' would be treated as \'0.5 mg`r "\U22C5"`L^-1^\'). Estimated values above a calibration curve were treated as equivalent to the maximum known value (e.g., a value reported as \'>250 mg`r "\U22C5"`L^-1^\' would be treated as \'250 mg`r "\U22C5"`L^-1^\'). If detection limit values included less-than symbols, the upper bound was used (e.g., an MDL appearing as \'<1 mg`r "\U22C5"`L^-1^\' would be treated as \'1 mg`r "\U22C5"`L^-1^\'). Data users should consult the raw data available from WQP to determine if any of these issues apply in the data described in this report. Future data users are encouraged to address censored values in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). 
+
+Several other adjustments and assumptions were made prior to analysis. All pH data were converted from log-scale pH values to molar H^+^ concentrations ($[H^{+}] = 10^{-pH}$) before any analyses were performed, and then converted back ($pH = -log_{10}[H^{+}]$) to unitless pH values for visualization and reporting. The WQP characteristics 'Ammonia', 'Ammonia and ammonium', and 'Ammonia-nitrogen' were treated as interchangeably representing NH~3~-N levels. Similarly, WQP data for the characteristics 'Temperature' and 'Temperature, water' were treated as interchangeable measures of water temperature (air temperatures were assumed to be input as 'Temperature, air'). The WQP characteristics 'Nitrate' and 'Nitrate + Nitrite' were treated as distinct quantities for this report.  WQP characteristics used to represent total nitrogen (TN) and total phosphorus (TP) were input to WQP as 'Total Nitrogen, mixed forms' and 'Total Phosphorus, mixed forms,' respectively.
+
+<!-- NO~3~^-^-N methods convert NO~2~^-^-N -->
+
+
 ## Blank Performance
 
+
+### Context
+
+Blanks are analyte-free media used to detect contamination during some portion of a sampling activity. Blanks serve a critical quality control function in any project by allowing analysts to quantify the extent to which apparent signal in project data could be noise introduced by contamination. There are a variety of blank types (examples include trip, equipment, sampler, and filter blanks) designed to isolate contamination occurring during different aspects of a project. The focus of this report is on field and lab blanks.
+
+Field blanks should be treated as if they were routine field samples. For example, a bottle of analyte-free water may be brought to a sampling site, poured into a sample bottle following the project's sample collection procedures, and then treated exactly the same as a routine field sample (stored in the same cooler, processed for the same analytes by the same laboratory). Field blanks measure contamination that occurs anywhere in the project from sample collection, to handling, and all the way through to sample analysis. If field blanks remain analyte-free upon analysis, they provide confidence that contamination has been minimized throughout the entire project workflow. If field blanks indicate contamination is occurring, other blank types can be useful in identifying the contamination source by isolating specific aspects of a project workflow.
+
+Laboratory blanks are a quality control measure that isolates contamination introduced during laboratory analysis. Lab blanks are analyte-free media introduced into the project workflow at the laboratory and processed as if they were samples from that point forward. Lab blanks capture contamination from reagents, sample storage and handling protocols, and instrument carryover or other contamination occurring during instrument runs. These quality control samples provide insight into a laboratory's ability to generate data useful for decision-making.
+
+Blank performance is simple to evaluate; if an analyte is detected in a blank, the analyst should be concerned about contamination. When blank contamination is observed, project staff should review their sample collection and handling standard operating procedures (SOPs) to ensure that approaches to avoiding contamination are clearly and comprehensively documented. Staff training can help ensure that SOPs are implemented consistently by all project participants. SOPs should be updated as needed to provide clearer guidance on approaches to avoiding contamination (e.g., clarifying that gloves should be changed prior to collecting each sample or how bottle caps should be handled during sampling). Even projects without evidence of contamination should be vigilant, routinely training staff and critically reviewing SOPs.
+
+As a general guideline, field blanks should be collected at a rate of at least one blank per ten samples or one blank per sampling day, whichever results in more blanks. Laboratory blanks should also generally be run at least once every 10 samples. Project staff should consider increasing blank collection frequencies as appropriate for their project. Blank collection may be warranted where results are likely to be consequential, litigated, or for analytes with low action levels or those that are prone to contamination (e.g., studies measuring per- and polyfluoroalkyl  substances).
+
+
+### Summary of Blank Data
 
 ```{r}
 #| eval: false
@@ -155,7 +241,7 @@ if (nrow(allSummary$blank_proc) == 0) {
 } else {
   blank_int <- allSummary$blank_summary
   blank_int$`Sample Type` <- sapply(strsplit(blank_int$ActivityTypeCode, '-'), FUN = '[[', 2)
-blank_int$`Above MDL (%)` <- paste0(round(blank_int$exceedances / blank_int$n, 3)*100, '%')
+blank_int$`Above MDL (%)` <- paste0(round(blank_int$above_MDL / blank_int$n, 3)*100, '%')
 blank_int[, 5] <- round(blank_int[, 5], 3)
 names(blank_int)[c(3, 5:7, 9)] <- c('Analyte', 'Year', 'Blanks', 'Mean value', 'Above MDL (no.)')
 blank_table <- blank_int[, c(10, 3, 5:7, 9, 11)]
@@ -191,38 +277,40 @@ if (nrow(allSummary$blank_proc) == 0) {
   
   blank_int$`Total observations` <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% blank_int$CharacteristicName]
   blank_freq           <- blank_int$`Blanks (no.)` / blank_int$`Total observations`*100
-  blank_int$`Blank frequency`    <- paste0(round(blank_freq, 1), '%')
+  blank_int$`Blank collection rate`    <- paste0(round(blank_freq, 1), '%')
 
 blank_int$`Sample Type` <- sapply(strsplit(blank_int$ActivityTypeCode, '-'), FUN = '[[', 2)
 blank_int$Analyte       <- blank_int$CharacteristicName
 blank_table             <- blank_int[, c(10, 11, 3, 5, 4, 7, 9)]
-blank_table$`Blank frequency >10%?` <- ifelse(blank_freq >= 10.0, "\u2705", "\u274C")
-blank_table$`<5% of blanks contaminated?` <- ifelse(blank_int$pct_above_MDL <= 5.0, "\u2705", "\u274C")
+blank_table$`Is blank collection rate >10%?`  <- ifelse(blank_freq >= 10.0, "\u2705", "\u274C")
+blank_table$`Are <5% of blanks contaminated?` <- ifelse(blank_int$pct_above_MDL <= 5.0, "\u2705", "\u274C")
 }
 ```
+
 
 ```{r}
 #| echo: false
 #| warning: false
-#| fig-width: 8
-#| fig-cap: Figure 2. Field blank performance for each analyte over time (black). Red points indicate detection limits for each analyte during each sampling event.
+
 if (nrow(allSummary$blank_proc) == 0) {
  ggplot()
 } else {
 allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
 
-ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
+blank_plot <- ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
   geom_line(linetype = 2) + geom_point() + 
   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
   geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linetype = 1) +
   geom_point(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', size = 0.5) +
-  labs(y = 'Blank value', x = '')
+  labs(y = 'Field blank value', x = '')
 }
 ```
 
 
 ```{r}
 #| echo: false
+#| warning: false
+#| message: false
 tmp <- table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)])
 
 ### if TN is always a calculated value, exclude it from total samples
@@ -244,21 +332,71 @@ if (nrow(allSummary$blank_summary) == 0)  {
   number_field_blank_detects  <- NA
   percent_field_blank_detects <- NA
 } else {
-  number_field_blank_detects <- sum(allSummary$blank_summary$exceedances[grep(x =   allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
+  number_field_blank_detects <- sum(allSummary$blank_summary$above_MDL[grep(x =   allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE)
   
-  percent_field_blank_detects <- round(sum(allSummary$blank_summary$exceedances[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$n[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
+  percent_field_blank_detects <- round(sum(allSummary$blank_summary$above_MDL[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE) / sum(allSummary$blank_summary$n[grep(x = allSummary$blank_summary$ActivityTypeCode, pattern = 'Field Blank')], na.rm = TRUE), 3)*100
   }
 
 
 
 ### identify parameters without QC data (exclude sonde measurements)
 parameters_without_blanks <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$blank_summary$CharacteristicName), sonde_parameters))]
-
 if(length(parameters_without_blanks) < 1) {
  parameter_blank_message <- 'All of the laboratory parameters included in this report had some blank data.'
 } else {
-  parameter_blank_message <- paste0('Laboratory analytes without blanks included ', paste0(parameters_without_blanks, collapse = ', '),'.')
+  parameter_blank_message <- paste0('Laboratory analytes entirely lacking blank data included ', paste0(parameters_without_blanks, collapse = ', '),'.')
 }
+
+
+### check for parameter-years without blanks
+blankDat                 <- allSummary$blank_proc
+param_yrs_wo_blank <- plyr::ddply(blankDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
+                         c('CharacteristicName', 'year'), plyr::summarise, 
+                         number_of_blanks       = sum(!is.na(ResultMeasureValue)))
+### which of these year-parameter combos have data collected?
+tmpDat <- allSummary$data
+tmpDat$year <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+blanks_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
+                         c('CharacteristicName', 'year'), plyr::summarise, 
+                         number_of_obs       = sum(!is.na(ResultMeasureValue)))
+blanks_expected <- join_all(list(blanks_expected, param_yrs_wo_blank))
+blanks_expected$number_of_blanks[is.na(blanks_expected$number_of_blanks)] <- 0
+blanks_expected$ratio <- blanks_expected$number_of_blanks / blanks_expected$number_of_obs * 100
+blanks_expected$`Collection rate criterion met?` <- ifelse(blanks_expected$ratio < 10, 'No', 'Yes')
+
+blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ], aes(x = year, y = ratio)) + 
+  geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
+  scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + 
+  scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field blank collection rate') + xlab('') + geom_line(linetype = 3, col = 'gray60') + 
+  theme(legend.position='bottom')
+
+### is there a trend in blank collection rates over time:
+blank_lm <- summary(lm(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$ratio ~ blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$year))
+blank_rsq   <- blank_lm$r.squared # r2 for time variable
+blank_pval  <- blank_lm$coefficients[8] # p-value for time variable
+blank_slope <- blank_lm$coefficients[2] # slope over time
+
+if (blank_pval > 0.05) {
+  blank_collection_trend_message <- paste0('Across all available laboratory analytes (Fig. 3), blank collection frequencies do not show any trend over time (linear model; P>0.05).')
+} else if (blank_pval < 0.05) {
+  blank_collection_trend_message <- paste0('Across all available laboratory analytes, blank collection frequencies show a significant ', ifelse(blank_slope < 0, "downward", "upward"), ' trend over time (linear model; P<0.05, r^2^ = ', round(blank_rsq, 2), ').')
+  if (blank_slope < 0) {
+    blank_collection_trend_message <- paste0(blank_collection_trend_message, ' Declining blank collection rates are deeply concerning. The project should immediately raise blank collection rates to at least 10% of the samples collected.')
+  }
+   if (blank_slope > 0) {
+    blank_collection_trend_message <- paste0(blank_collection_trend_message, ' Rising blank collection rates are very encouraging and the effort directed at this quality control metric is commended.')
+  }
+
+}
+  
+# obs_per_yr <- ddply(newDat[, c('CharacteristicName', 'ResultMeasureValue', 'ActivityStartDate', 'MonitoringLocationIdentifier', 'year')], 
+#                          c('year'), summarise, 
+#                     `Parameters measured` = length(unique(CharacteristicName)), 
+#                     `Sites` = length(unique(MonitoringLocationIdentifier)), 
+#                     `Sampling events`   = length(unique(ActivityStartDate)),
+#                          `Data points per year`       = sum(!is.na(ResultMeasureValue)))
+
 
 ### identify years without QC data 
 ### can make this more complex, identifying params without blank data in years when other params had reported blank data
@@ -267,18 +405,63 @@ years_with_data      <- sort(as.numeric(na.omit(unique(substr(allSummary$data$Ac
 years_without_blanks <- years_with_data[!(years_with_data %in% years_with_blanks)]
 
 if(length(years_without_blanks) < 1) {
- year_blank_message <- 'Blank data was reported in every year during the period of record covered by this report.' 
+ year_blank_message <- 'Some blank data was reported in every year during the period of record covered by this report.' 
 } else {
-  year_blank_message <- paste0('Blank data was not reported during the following years: ', paste0(years_without_blanks, collapse = ', '),'.')
+  year_blank_message <- paste0('Blank data was completely missing from ', sub(",([^,]*)$",", and\\1", x = paste0(years_without_blanks, collapse = ', ')),'.')
 }
+if (any(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$number_of_blanks == 0)) {
+  # year_blank_message
+  tst <- blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ][
+   which(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$number_of_blanks == 0), c('CharacteristicName', 'year')]
+  fragments <- apply(X = tst, MARGIN = 1, FUN = paste0, collapse = ' in ')
+  fragments <- sub(",([^,]*)$",", and\\1", x = paste0(fragments, collapse = ', '))
+  year_blank_message <- paste0(year_blank_message, " ", sum(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$number_of_blanks == 0), ' parameter-year had lab data without corresponding blank data (', fragments, '; see points with 0% collection rates in Figure 4). Quality control measures should always be collected when samples are collected.')
+} else {
+  ' Although not every lab parameter may be measured every year, every parameter-year combination that had data reported for this project also had some blank data reported. This is commendable effort to collect quality control data.'
+}
+
+### check for sonde data that have blanks
+sonde_params_with_blanks <- paste0(unique(blankDat$CharacteristicName)[which(unique(blankDat$CharacteristicName) %in% sonde_parameters)], collapse = ', ')
+sonde_params_with_blanks <- sub(",([^,]*)$",", and\\1", x = sonde_params_with_blanks)
+if (length(sonde_params_with_blanks) > 0) {
+  sonde_param_statement    <- paste0("The presence of blank data for ", sonde_params_with_blanks, " was concerning given that those data are likely to have been collected with sondes. Project staff are urged to confirm the accuracy of these data entries.")
+}
+
+
+### check for blank data without MDLs and varying MDLs
+
 
 ```
 
-There were `r sum(allSummary$blank_summary$n, na.rm = TRUE)` lab and field blanks collected during the period of interest. This total number is composed of `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels.
+
+The `r allSummary$data$OrganizationFormalName[1]` CWA106 project collected `r sum(allSummary$blank_summary$n, na.rm = TRUE)` lab and field blanks during the period of interest for this report. This total number is composed of `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels.
 
 `r year_blank_message`
 
 `r parameter_blank_message`
+
+`r sonde_param_statement`
+
+`r blank_collection_trend_message`
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-cap: Figure 3. Field blank collection rates for each analyte over time. Red-filled points indicate blank collection rates below the target 10% (dashed horizontal line); green-filled circles indicate parameter-years meeting the 10% target.
+blank_ratio_plot
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-cap: Figure 4. Field blank performance for each analyte over time (black). Red points indicate detection limits for each analyte during each sampling event.
+blank_plot
+```
 
 
 ```{r}
@@ -289,7 +472,8 @@ gt(blank_table)
 
 
 
-### Recommendations: Blanks
+### Recommendations
+
 
 ```{r}
 #| include: false
@@ -297,10 +481,8 @@ gt(blank_table)
 rec_list <- list()
 if (number_of_lab_blanks == 0) {
   lab_blank_rec <- '**Laboratory blanks** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive collection and reporting of laboratory blanks for conducting meaningful assessments of data quality, identifying contamination, and making comparisons among data from different laboratories.'
-} else if (number_of_lab_blanks < no_years) {
-  lab_blank_rec <- '**Laboratory blanks** appear in the reported data at a rate of less than one lab blank per year, indicating either minimal collection or incomplete reporting of these QC data to WQP. More comprehensive reporting of laboratory blanks into WQP would enable more meaningful assessment of data quality differences among datasets and laboratories.'
 } else if (number_of_lab_blanks < 0.10*no_samples) {
-  lab_blank_rec <- paste0('**Laboratory blanks** appear in the data reported to WQP, but represent just ', round(number_of_lab_blanks / no_samples*100), '% of all samples. Recommendations include ensuring that laboratory blanks are reported comprehensively and increasing the frequency of laboratory blanks to at least 10% of lab samples.')
+  lab_blank_rec <- paste0('**Laboratory blanks** appear in the data reported to WQP, but represent just ', round(number_of_lab_blanks / no_samples*100), '% of all samples. Recommendations include ensuring that laboratory blanks are reported comprehensively and including laboratory blanks at a rate of at least 10% of lab samples.')
 } else if (number_of_lab_blanks >= 0.10*no_samples) {
   lab_blank_rec <- '**Laboratory blanks** represent at least 10% of all lab samples. Project Managers are commended for their high level of effort and reporting on this quality metric.'
 }
@@ -311,7 +493,7 @@ rec_list$lab_blank <- lab_blank_rec
 if (number_of_field_blanks == 0) {
   field_blank_rec <- '**Field blanks** were either not collected or not input into WQP. More comprehensive reporting of field blanks in WQX is critical for evaluating contamination and bias in the generated data.'
 } else if (number_of_field_blanks < 0.10*no_samples) {
-  field_blank_rec <- paste0('**Field blanks** appear in the reported data at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). This indicates either limited collection or incomplete reporting of these important QC data to WQP. Increasing the frequency of field blanks to at least 10% is highly recommended. Improving collection and reporting of field blank data is critical to ensure that project data can be useful for decision-making.')
+  field_blank_rec <- paste0('**Field blanks** appear in the reported data at a rate of ', round(number_of_field_blanks / no_samples*100), '% of all relevant samples (excluding sonde data). This indicates either limited collection or incomplete reporting of these important QC data to WQP. Increasing the field blank collection rate to at least 10% is highly recommended. Improving collection and reporting of field blank data is critical to ensure that project data can be useful for decision-making.')
 } else if (number_of_field_blanks >= 0.10*no_samples) {
   field_blank_rec <- paste0('**Field blanks** represent ', round(number_of_field_blanks / no_samples*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
@@ -335,7 +517,7 @@ if(is.na(percent_field_blank_detects)) {
 } else if(percent_field_blank_detects <= 10) {
   blank_issues <- 'This is encouraging and indicates consistent attention to detail during sample collection and handling.'
 } else {
-  blank_issues <- 'This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the frequency of blank collection and re-training staff are among the possible ways to reduce contamination during sample collection and handling.'
+  blank_issues <- 'This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the blank collection rate and re-training staff are among the possible ways to reduce contamination during sample collection and handling.'
 }
 
 # ### simplify message if there's no blank data
@@ -343,7 +525,7 @@ if(is.na(percent_field_blank_detects)) {
 
 rec_list$blank_freq_time  <- blank_collection_consistency_time
 rec_list$blank_freq_param <- blank_collection_consistency_param
-rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. ' , blank_issues, ' See Table 1 for parameter-specific performance and to identify specific areas for improvement.')
+rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. ' , blank_issues, ' See Table 1 and Figure 3 for parameter-specific performance and to identify specific areas for improvement.')
 ```
 
 -   `r rec_list$lab_blank`
@@ -360,13 +542,77 @@ rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_
 
 ## Replicate Performance
 
+### Context
+
 <!-- `r sum(allSummary$blank_summary$Blanks, na.rm = TRUE)` lab and field blanks appeared in the dataset: `r number_of_lab_blanks` laboratory blanks and `r number_of_field_blanks` field blanks. Of the field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels. -->
+
+Replicates are a category of quality control measures that document how precise a procedure is. Field replicates are samples from the same location collected simultaneously in separate bottles, and then processed as if they were entirely separate samples. 
+
+Field replicates are typically collected individually, rather than split from a single water sample, and unavoidably incorporate some level of natural variation. However, water bodies are unlikely to vary dramatically on the time scale relevant to field sample collection. The major sources of imprecision are more likely to be inconsistencies in sample collection (e.g., collecting replicates from slightly different locations or depths in a stream, or disturbing sediment during sampling), sample handling, or other aspects of the sampling workflow. Importantly, field replicates go through the entire sample handling and analysis process and they therefore include deficiencies in analytical procedures. It is important to be able to separate sources of imprecision attributable to field vs. lab practices. Using multiple forms of replication can help to isolate sources of variation.
+
+Lab replicates are useful in assessing the magnitude of variation introduced during analytical procedures. Lab replication entails analyzing multiple subsamples from a single field sample (or standard reference material). The field sample is reasonably expected to be homogenous, and thus the generated data are expected to be identical if the analytical procedure is implemented consistently. Lab replicates therefore evaluate consistency in sample preparation and analysis, and are an important complement to field replicates.
+
+Replicate performance for a set of two samples is typically calculated as the relative percent difference (RPD) between replicates $R1$ and $R2$:
+$$ RPD = {|R1-R2| \over (R1 + R2)/2} \cdot 100 $$
+When a set of replicates has more than two samples, performance can be calculated as the coefficient of variation (CV), where $\sigma$ is the standard deviation and $\mu$ is the mean of the replicate set:
+$$ CV = {\sigma \over \mu} \cdot 100 $$ 
+Replicate performance targets are typically in the 10-20% range. Levels of variation above the target are likely to be improved by conducting sampling or laboratory activities more systematically and consistently. Guidance on replication rates are typically to collect one field replicate for every ten samples or at least one field replicate per sampling day, whichever results in greater replication. The one-per-ten guideline is also commonly used for laboratory replicates. Aside from these general guidelines, precision targets and replication rates should be a function of project characteristics. Projects that are controversial, costly, high-profile, or otherwise consequential for human or environmental health require high-quality data and may necessitate elevated rates of replication.
+
+Replicate data in WQP present challenges for analyses of the quality control performance. WQP data identify paired lab replicates clearly, but field replicates are ambiguous. For field replicates, one WQP entry is labeled as a replicate but the corresponding paired sample is not identified. To make these identifications, the summary below identified replicate sets as groups of samples collected at the same location (monitoring site ID), depth, and on the same day. The focus of this report is on lab and field replicates. After identifying sets of replicated data, lab replicates were separated by identifying sets with a sample type 'Quality Control Sample-Lab Duplicate.' Unless labeled as lab replicates or otherwise differentiated, simultaneously collected samples were treated as field replicates. There are potential flaws in this approach to designating replicates; for example, data erroneously input twice or collected as part of an intra-day time series would be treated as field replicates. These scenarios would artificially inflate replicate collection rates and have an unpredictable effect on replicate variability. Project staff are encouraged to evaluate the raw data independently and carefully before acting on the recommendations below.
+
+
+### Summary of Replicate Data
+
 
 ```{r}
 #| echo: false
 #| warning: false
-#| fig-width: 8
-#| fig-cap: Figure 3. Replicate performance by parameter during the period of record for this report. Each point shows variation among a set of simultaneously-collected replicates, overlaid on boxplots indicating the 25th, 50th (bar), and 75th percentiles of the distribution for each parameter. Boxplot whiskers extend to the largest value up to 1.5 times the interquartile range beyond the 25th and 75th percentiles. The total number of replicate sets are indicated above each parameter. A dashed horizontal line is shown at the 20% level for reference.
+#| message: false
+### which of these year-parameter combos have reps collected?
+repDat                 <- allSummary$rep_proc
+repDat$year            <- as.numeric(substr(repDat$ActivityStartDate, 1, 4))
+param_yrs_wo_reps <- plyr::ddply(repDat[, c('CharacteristicName', 'aver', 'year')], 
+                         c('CharacteristicName', 'year'), plyr::summarise, 
+                         number_of_reps       = sum(!is.na(aver)))
+tmpDat <- allSummary$data
+tmpDat$year <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
+                         c('CharacteristicName', 'year'), plyr::summarise, 
+                         number_of_obs       = sum(!is.na(ResultMeasureValue)))
+reps_expected <- join_all(list(reps_expected, param_yrs_wo_reps))
+reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
+reps_expected$ratio <- reps_expected$number_of_reps / reps_expected$number_of_obs * 100
+reps_expected$`Collection rate criterion met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
+
+rep_ratio_plot <- ggplot(data = reps_expected, aes(x = year, y = ratio)) + 
+  geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
+  scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + #, guide = guide_axis(n.dodge = 2)) + 
+  scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field replicate collection rate') + xlab('') + geom_line(linetype = 3, col = 'gray60') + theme(legend.position='bottom') + theme(axis.text.x=element_text(size=rel(0.75)))
+
+### is there a trend in blank collection rates over time:
+rep_lm <- summary(lm(reps_expected$ratio ~ reps_expected$year))
+rep_rsq   <- rep_lm$r.squared # r2 for time variable
+rep_pval  <- rep_lm$coefficients[8] # p-value for time variable
+rep_slope <- rep_lm$coefficients[2] # slope over time
+
+if (rep_pval > 0.05) {
+  rep_collection_trend_message <- paste0('Across all available parameters (Fig. X), field replicate collection frequencies do not show any trend over time (linear model; P>0.05).')
+} else if (rep_pval < 0.05) {
+  rep_collection_trend_message <- paste0('Across all available parameters, field replicate collection frequencies show a significant ', ifelse(rep_slope < 0, "downward", "upward"), ' trend over time (linear model; P<0.05, r^2^ = ', round(rep_rsq, 2), ').')
+  if (rep_slope < 0) {
+    rep_collection_trend_message <- paste0(rep_collection_trend_message, ' Declining field replicate collection rates are deeply concerning. The project should immediately raise replicate collection rates to at least 10% of the samples collected.')
+  }
+   if (rep_slope > 0) {
+    rep_collection_trend_message <- paste0(rep_collection_trend_message, ' Rising field replicate collection rates are very encouraging and the effort directed at this quality control metric is commended.')
+   }
+}
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
 
 ### Replicate sets above 20% variation, by parameter
 ### can split this into field vs. lab in future if orgs report lab reps
@@ -390,7 +636,7 @@ label_location <- as.numeric(quantile(x = allSummary$rep_proc$RPD, probs = 0.95,
 
 fig3 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = CharacteristicName, y = RPD)) +
   geom_boxplot(outlier.shape = NA) + theme_bw() + #  theme(axis.text.x=element_blank())
-  ylab(allSummary$rep_summary$variation_measure[1]) + xlab('') + scale_y_continuous(labels = function(x) paste0(x, "%")) +  
+  ylab(paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)')) + xlab('') + scale_y_continuous(labels = function(x) paste0(x, "%")) +  
   geom_jitter(width=0.2, size=2, alpha = 0.2) +
   geom_text(
     data = rep_totals_by_param,
@@ -403,16 +649,16 @@ fig3 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCod
 
 above20_by_param$tot_samples               <- tot_samples$`Total observations`[tot_samples$CharacteristicName %in% above20_by_param$CharacteristicName]
 above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
-above20_by_param$`Replicate frequency (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
-above20_by_param$`Replicate frequency >10%?`        <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
-above20_by_param$`Are <10% of reps high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
+above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
+above20_by_param$`Replicates >10% of samples?`        <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
+above20_by_param$`Are <10% of replicates high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
 } else {
   fig3 <- ggplot() + ggtitle('No replicates reported')
-  above20_by_param$tot_samples               <- NA
-  above20_by_param$rep_freq                  <- NA
-  above20_by_param$`Replicate frequency (%)` <- NA
-  above20_by_param$`Replicate frequency >10%?`        <- "\u274C"
-  above20_by_param$`Are <10% of reps high-variation?` <- "\u274C"
+  above20_by_param$tot_samples                     <- NA
+  above20_by_param$rep_freq                        <- NA
+  above20_by_param$`Replicate Collection rate (%)` <- NA
+  above20_by_param$`Are replicates >10% of samples?`        <- "\u274C"
+  above20_by_param$`Are <10% of replicates high-variation?` <- "\u274C"
 }
 names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
@@ -426,9 +672,9 @@ samples_for_rep_comparison <- sum(!is.na(allSummary$data$ResultMeasureValue[allS
 parameters_without_reps <- unique(allSummary$data$CharacteristicName)[!(unique(allSummary$data$CharacteristicName) %in% c(unique(allSummary$rep_summary$CharacteristicName)))]
 
 if(length(parameters_without_reps) < 1) {
- parameter_rep_message <- 'All of the laboratory parameters included in this report had some replicate data.'
+ parameter_rep_message <- 'All of the parameters included in this report had some replicate data.'
 } else {
-  parameter_rep_message <- paste0('Laboratory analytes without replicates included ', paste0(parameters_without_reps, collapse = ', '),'.')
+  parameter_rep_message <- paste0('Parameters without replicates included ', paste0(parameters_without_reps, collapse = ', '),'.')
 }
 TN_note <- NULL
 ### add a note if TN is a calculated quantity
@@ -463,7 +709,6 @@ variation_measure_message <- ifelse(allSummary$rep_summary$variation_measure[1] 
                                     paste0('Some replicates sets included as many as ', max(table(allSummary$rep_raw$id)), ' individual replicates. This could indicate errors during data entry into WQP, or it may reflect exceptional levels of replication. This report could not resolve those uncertainties, and so used the coefficent of variation (CV) as the measure of variation among replicates. Lower CVs indicate less variation among replicates.'), 
                                     'Replicate sets contained a maximum of two individual samples, and so the relative percent difference (RPD) was used as the measure of variation among replicates. Lower RPDs indicate lower levels of variation among replicates.')
 
-fig3
 ```
 
 Over the period of record used for this report, `r allSummary$data$OrganizationFormalName[1]` collected `r total_reps` sets of replicates. This combined total includes `r number_of_field_reps` field replicates and `r number_of_lab_reps` lab replicates. Field replicates comprised `r round(number_of_field_reps/ samples_for_rep_comparison*100)`% of all samples.
@@ -476,15 +721,10 @@ In comparison to the 20% target level of variation, replicate performance was `r
 
 `r parameter_rep_message`
 
-```{r}
-#| echo: false
-#| warning: false
-#| label: Table2
-#| fig-cap: Table 2. Summary of replicate collection rates and performance by analyte. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
-gt(above20_by_param[, c(1:3, 7, 4, 8:9)])
-```
 
-Replicate variation is expected to be elevated for analytes that are not homogenous throughout the water column. This group includes *E. coli*, turbidity/total suspended solids (TSS), total Kjeldahl nitrogen (TKN), total phosphorus, and other analytes that rely on particulate fractions. This variation itself may be inconsistent over time (Figure 4), varying as a function of discharge and local in-stream deposition/erosion dynamics.
+`r rep_collection_trend_message`
+
+Replicate variation is expected to be elevated for analytes that are not homogenous throughout the water column. This group includes *E. coli*, turbidity/total suspended solids (TSS), total Kjeldahl nitrogen (TKN), total phosphorus, and other analytes that rely on particulate fractions. This variation itself may be inconsistent over time (Figure 6), varying as a function of discharge and local in-stream deposition/erosion dynamics.
 
 Analytes that measure dissolved quantities (temperature, DO, ions) are expected to be more consistent between replicate samples, and variation in these analytes is more likely to reflect discrepancies in sample collection, handling, and contamination. However, if dissolved analytes (NO3-N, NH3-N) are filtered in the lab rather than in the field, there are opportunities for compounds to sorb or desorb from particles in the collected water, providing another source of variation captured by replicates.
 
@@ -492,7 +732,28 @@ Analytes that measure dissolved quantities (temperature, DO, ions) are expected 
 #| echo: false
 #| warning: false
 #| fig-width: 8
-#| fig-cap: Figure 4. Field replicate performance over time for each parameter. Note that y-axis scales vary across facets. A dashed horizontal line is shown in each facet at the 20% level for reference.
+#| fig-cap: Figure 5. Field replicate collection rates for each analyte over time. Red-filled points indicate replicate collection rates below the target 10% (dashed horizontal line); green-filled circles indicate parameter-years meeting the 10% target.
+rep_ratio_plot
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-cap: Figure 6. Field replicate performance by parameter during the period of record for this report. Each point shows variation among a set of simultaneously-collected replicates, overlaid on boxplots indicating the 25th, 50th (bar), and 75th percentiles of the distribution for each parameter. Boxplot whiskers extend to the largest value up to 1.5 times the interquartile range beyond the 25th and 75th percentiles. The total number of field replicate sets are indicated above each parameter. A dashed horizontal line is shown at the 20% level for reference.
+
+
+fig3
+```
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-width: 8
+#| fig-cap: Figure 7. Field replicate performance over time for each parameter. Note that y-axis range varies among facets. A dashed horizontal line is shown in each facet at the 20% level for reference.
 if (!any(complete.cases(allSummary$rep_proc))) {
   ggplot() + ggtitle('No replicates reported')
 } else {
@@ -502,13 +763,24 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
   geom_line(linetype = 2) + geom_point() + scale_y_continuous(labels = function(x) paste0(x, "%")) +
   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
   geom_hline(yintercept = 20, linetype = 3) +
-  labs(y = allSummary$rep_summary$variation_measure[1], x = '') # '(\u00b11SD)'
+  labs(y = paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') # '(\u00b11SD)'
 }
 
 ```
 
 
-### Recommendations: Replicates
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: Table2
+#| fig-cap: Table 2. Summary of field replicate collection rates and performance by analyte. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
+gt(above20_by_param[, c(1:3, 7, 4, 8:9)])
+```
+
+
+
+### Recommendations
 
 ```{r}
 #| include: false
@@ -516,7 +788,7 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
 if (number_of_lab_reps == 0) {
   lab_rep_rec <- '**Laboratory replicates** were not present in data found in the Water Quality Portal. These data appear to have been either not collected or not input into WQP. More comprehensive reporting of laboratory replicates into WQP would enable more meaningful assessment of data quality.'
 } else if (number_of_lab_reps < 0.10*samples_for_rep_comparison) {
-  lab_rep_rec <- paste0('**Laboratory replicates** appear in the data reported to WQP, but represent just ', round(number_of_lab_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that laboratory replicates are reported comprehensively and increasing the frequency of laboratory replicates to at least 10% of lab samples.')
+  lab_rep_rec <- paste0('**Laboratory replicates** appear in the data reported to WQP, but represent just ', round(number_of_lab_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that laboratory replicates are reported comprehensively and increasing laboratory replicate rates to at least 10% of lab samples.')
 } else if (number_of_lab_reps >= 0.10*samples_for_rep_comparison) {
   lab_rep_rec <- '**Laboratory replicates** represent at least 10% of all lab samples. Project Managers are commended for their high level of effort and reporting on this quality metric.'
 }
@@ -527,7 +799,7 @@ rec_list$lab_rep <- lab_rep_rec
 if (number_of_field_reps == 0) {
   field_rep_rec <- '**Field replicates** were either not collected or not input into WQP. More comprehensive reporting of field replicates in WQX is critical for evaluating contamination and bias in the generated data.'
 } else if (number_of_field_reps < 0.10*samples_for_rep_comparison) {
-  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field replicates are reported comprehensively and increasing the frequency of field replicates to at least 10% of all samples.')
+  field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that field replicates are reported comprehensively and increasing field replicate collection rates to at least 10% of the data for each parameter.')
 }else if (number_of_field_reps >= 0.10*samples_for_rep_comparison) {
   field_rep_rec <- paste0('**Field replicates** represent ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples (excluding sonde data), above the target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.')
 }
@@ -549,9 +821,9 @@ if ((length(parameters_without_reps) == 0)) {
 if(is.na(reps_pct_above20)) {
   rep_issues <- paste0('Replicates were not reported, and thus it is not possible to evaluate replicate performance or the quality of the ', allSummary$data$OrganizationFormalName[1], ' data appearing in WQP.')
 } else if(reps_pct_above20 <= 10) {
-  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling. See Table 2 and Figure 4 for parameter-specific performance and to identify specific areas for improvement.'
+  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling. See Table 2 and Figure 6 for parameter-specific performance and to identify specific areas for improvement.'
 } else {
-  rep_issues <- 'This level of imprecision suggests examining opportunities for improved consistency and attention to detail during sample collection and handling. Increasing the frequency of replicates is recommended to help identify the underlying issues. See Table 2 and Figure 4 for parameter-specific performance and to identify specific areas for improvement.'
+  rep_issues <- 'This level of imprecision suggests examining opportunities for improved consistency and attention to detail during sample collection and handling. Increasing the rate of replicate collection is recommended to help identify the underlying issues. See Table 2 and Figure 7 for parameter-specific performance and to identify specific areas for improvement.'
 }
 
 
