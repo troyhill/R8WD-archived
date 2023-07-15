@@ -22,7 +22,7 @@ create_report <- function(org = 'TURTLEMT',
                           parameters = c(1:length(params$params)),
                             extFile = 'script_generateReport.qmd',
                           prompt_user = TRUE,
-                          output = 'docx') {
+                          output = 'html') {
 
   ### format output
   if(!grepl(x = tolower(output[1]), pattern = '^docx$|^html$')) {
