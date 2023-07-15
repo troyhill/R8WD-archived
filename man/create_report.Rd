@@ -11,7 +11,7 @@ create_report(
   parameters = c(1:length(params$params)),
   extFile = "script_generateReport.qmd",
   prompt_user = TRUE,
-  output = "docx"
+  output = "html"
 )
 }
 \arguments{

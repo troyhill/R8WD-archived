@@ -15,13 +15,3 @@ an interactive map of sample locations displayed as a Leaflet plot
 \description{
 Create Summary Map of Sampling Locations
 }
-\examples{
-{
-\dontrun{
-data <- getWQP(organization = \"TURTLEMT\", startDate = \"01-01-2015\",
-endDate = \"12-31-2022\")
-create_map(data)
-}
-}
-
-}
