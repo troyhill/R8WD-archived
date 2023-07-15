@@ -27,6 +27,7 @@ summarizeQC <- function(data) {
 
   ### TODO: make this handle all varieties of blanks, not just lab and field.
   ### TODO: incorporate other QC measures (matrix spikes?)
+  ### TODO: find a dataset with lab reps to see if the function mishandles anything (e.g., what is behavior if a field rep is also lab repped? How are lab reps linked to parent sample?)
 
   ### convert pH from log scale to molar [H+]
   if (length(data$ResultMeasureValue[grep(x = data$CharacteristicName, pattern = 'pH')]) > 0) {
@@ -167,7 +168,7 @@ summarizeQC <- function(data) {
                                n          = sum(!is.na(ResultMeasureValue)),
                                blank.mean = mean(ResultMeasureValue, na.rm = TRUE),
                                blank.sd   = sd(ResultMeasureValue, na.rm = TRUE),
-                               exceedances= sum(exceedMDL)
+                               above_MDL= sum(exceedMDL)
   )
   # blank.summary$loc <- paste0(OrganizationIdentifier, '__', MonitoringLocationIdentifier)
 
@@ -175,11 +176,11 @@ summarizeQC <- function(data) {
   blanks <- blanks[order(blanks$OrganizationFormalName, blanks$ActivityStartDate, blanks$CharacteristicName), ]
 
   ### convert pH from molar [H+] to log scale
-  if (length(blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')]) > 0)     blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')]       <- -log10(blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')])
-  if (length(blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]) > 0)    blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')] <- -log10(blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')])
-  if (length(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]) > 0) blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]   <- -log10(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')])
-  if (length(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')]) > 0) returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')]   <- -log10(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')])
-  if (length(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]) > 0)     tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]           <- -log10(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')])
+  if (length(blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')]) > 0)     blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')]             <- -log10(blanks$ResultMeasureValue[grep(x = blanks$CharacteristicName, pattern = 'pH')])
+  if (length(blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]) > 0)    blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]  <- -log10(blank.summary$blank.mean[grep(x = blank.summary$CharacteristicName, pattern = 'pH')])
+  if (length(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]) > 0) blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')]         <- -log10(blank.summary$blank.sd[grep(x = blank.summary$CharacteristicName, pattern = 'pH')])
+  if (length(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')]) > 0) returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')] <- -log10(returnDat2$ResultMeasureValue[grep(x = returnDat2$CharacteristicName, pattern = 'pH')])
+  if (length(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]) > 0)     tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')]             <- -log10(tmpDat$ResultMeasureValue[grep(x = tmpDat$CharacteristicName, pattern = 'pH')])
   if (!all(is.na(reps_all)) && (length(reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')]) > 0)) { # if there are reps and they include pH
     reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')] <- -log10(reps_all$aver[grep(x = reps_all$CharacteristicName, pattern = 'pH')])
     }
