@@ -377,7 +377,7 @@ blanks_expected$number_of_blanks[is.na(blanks_expected$number_of_blanks)] <- 0
 blanks_expected$ratio <- blanks_expected$number_of_blanks / blanks_expected$number_of_obs * 100
 blanks_expected$`Collection rate criterion met?` <- ifelse(blanks_expected$ratio < 10, 'No', 'Yes')
 
-blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ], aes(x = year, y = ratio)) + 
+blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters) & !is.na(blanks_expected$ratio), ], aes(x = year, y = ratio)) + 
   geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
   scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + 
   scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
@@ -385,7 +385,7 @@ blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$Characterist
   theme(legend.position='bottom')
 
 ### is there a trend in blank collection rates over time:
-blank_lm <- summary(lm(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$ratio ~ blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$year))
+blank_lm <- summary(lm(ratio ~ year, data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters) & is.finite(blanks_expected$ratio), ]))
 blank_rsq   <- blank_lm$r.squared # r2 for time variable
 blank_pval  <- blank_lm$coefficients[8] # p-value for time variable
 blank_slope <- blank_lm$coefficients[2] # slope over time
@@ -611,24 +611,24 @@ repDat$year            <- as.numeric(substr(repDat$ActivityStartDate, 1, 4))
 param_yrs_wo_reps <- plyr::ddply(repDat[, c('CharacteristicName', 'aver', 'year')], 
                          c('CharacteristicName', 'year'), plyr::summarise, 
                          number_of_reps       = sum(!is.na(aver)))
-tmpDat <- allSummary$data
-tmpDat$year <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+tmpDat        <- allSummary$data
+tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
 reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
                          c('CharacteristicName', 'year'), plyr::summarise, 
                          number_of_obs       = sum(!is.na(ResultMeasureValue)))
-reps_expected <- join_all(list(reps_expected, param_yrs_wo_reps))
+reps_expected <- plyr::join_all(list(reps_expected, param_yrs_wo_reps))
 reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
 reps_expected$ratio <- reps_expected$number_of_reps / reps_expected$number_of_obs * 100
 reps_expected$`Collection rate criterion met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
 
-rep_ratio_plot <- ggplot(data = reps_expected, aes(x = year, y = ratio)) + 
+rep_ratio_plot <- ggplot(data = reps_expected[!is.na(reps_expected$ratio), ], aes(x = year, y = ratio)) + 
   geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
   scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + #, guide = guide_axis(n.dodge = 2)) + 
   scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
   scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field replicate collection rate') + xlab('') + geom_line(linetype = 3, col = 'gray60') + theme(legend.position='bottom') + theme(axis.text.x=element_text(size=rel(0.75)))
 
 ### is there a trend in blank collection rates over time:
-rep_lm <- summary(lm(reps_expected$ratio ~ reps_expected$year))
+rep_lm    <- summary(lm(ratio ~ year, data = reps_expected[is.finite(reps_expected$ratio), ]))
 rep_rsq   <- rep_lm$r.squared # r2 for time variable
 rep_pval  <- rep_lm$coefficients[8] # p-value for time variable
 rep_slope <- rep_lm$coefficients[2] # slope over time
