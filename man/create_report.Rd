@@ -11,7 +11,8 @@ create_report(
   parameters = c(1:length(params$params)),
   extFile = "script_generateReport.qmd",
   prompt_user = TRUE,
-  output = "html"
+  output = "html",
+  output_directory = file.path(getwd(), "RBWD_output")
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ create_report(
 \item{prompt_user}{if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.}
 
 \item{output}{either 'docx' or 'html'}
+
+\item{output_directory}{directory where output will be located. If the directory doesn't exist it will be created.}
 }
 \value{
 Quarto markdown document
