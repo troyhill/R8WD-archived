@@ -9,6 +9,7 @@
 #' @param extFile name of report-generating script, located in the inst/extdata folder of the R8WD R package
 #' @param prompt_user if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.
 #' @param output either 'docx' or 'html'
+#' @param output_directory directory where output will be located. If the directory doesn't exist it will be created.
 #'
 #' @return Quarto markdown document
 #' @export
@@ -20,9 +21,10 @@ create_report <- function(org = 'TURTLEMT',
                           startDate = '01-01-2015',
                           endDate   = '12-31-2022',
                           parameters = c(1:length(params$params)),
-                            extFile = 'script_generateReport.qmd',
+                          extFile = 'script_generateReport.qmd',
                           prompt_user = TRUE,
-                          output = 'html') {
+                          output = 'html',
+                          output_directory = file.path(getwd(), 'RBWD_output') ) {
 
   ### format output
   if(!grepl(x = tolower(output[1]), pattern = '^docx$|^html$')) {
@@ -32,7 +34,15 @@ create_report <- function(org = 'TURTLEMT',
   }
 
   targetFile <- system.file('extdata', extFile, package = 'R8WD')
-  newFile    <- tempfile('wqp_report', fileext = '.qmd')
+  ### check that output directory exists, create it if needed
+  if (!dir.exists(output_directory)) {
+    dir.create(output_directory)
+  }
+  # newFile    <- tempfile(paste0(org[1], '_QC-Report_', format(Sys.Date(), format = '%Y%m%d'), "_"), tmpdir = output_directory, fileext = '.qmd')
+  ### make files easy for staff to work with
+  newFile    <- file.path(output_directory, paste0(org[1], '_QC-Report_', format(Sys.Date(), format = '%Y%m%d'), ".qmd"))
+  file.create(newFile, overwrite = TRUE)
+  # if (file.exists(newFile)) file.remove(newFile)
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
 
   if (prompt_user) {
