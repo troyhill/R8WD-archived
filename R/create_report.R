@@ -40,8 +40,8 @@ create_report <- function(org = 'TURTLEMT',
   }
   # newFile    <- tempfile(paste0(org[1], '_QC-Report_', format(Sys.Date(), format = '%Y%m%d'), "_"), tmpdir = output_directory, fileext = '.qmd')
   ### make files easy for staff to work with
-  newFile    <- file.path(output_directory, paste0(org[1], '_QC-Report_', format(Sys.Date(), format = '%Y%m%d'), ".qmd"))
-  file.create(newFile, overwrite = TRUE)
+  newFile    <- file.path(output_directory, paste0(toupper(org[1]), '_QC-Report_', format(Sys.Date(), format = '%Y%m%d'), ".qmd"))
+  # file.create(newFile, overwrite = TRUE)
   # if (file.exists(newFile)) file.remove(newFile)
   token      <- '\'REPLACE_THIS_TEXT\'' # capture quotations
 
@@ -52,10 +52,10 @@ create_report <- function(org = 'TURTLEMT',
   }
 
   ### if org is a vector, create an insertable string. This is benign where length == 1, so no ifelse statement
-  org <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
+  org2 <- paste0("\'", paste0(gsub(x = toupper(org), pattern = "\'|\"", replacement = ''), collapse = '\',\''), "\'")
   ### test for presence
   # grep(token, readLines(targetFile), value = TRUE) # remove ^ and $ to make this work
-  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org)
+  newText    <- gsub(x = readLines(targetFile), pattern = token, replacement = org2)
 
   ### add dates
   newText    <- gsub(x = newText, pattern = 'REPLACE_START_DATE', replacement = startDate)
