@@ -24,7 +24,7 @@ create_report <- function(org = 'TURTLEMT',
                           extFile = 'script_generateReport.qmd',
                           prompt_user = TRUE,
                           output = 'html',
-                          output_directory = file.path(getwd(), 'RBWD_output') ) {
+                          output_directory = file.path(getwd(), 'R8WD_output') ) {
 
   ### format output
   if(!grepl(x = tolower(output[1]), pattern = '^docx$|^html$')) {
