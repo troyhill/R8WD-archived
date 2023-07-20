@@ -706,7 +706,7 @@ fig3 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCod
 
 above20_by_param$tot_samples               <- tot_samples$`Total observations`[match(above20_by_param$CharacteristicName, tot_samples$CharacteristicName)]
 above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
-above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
+above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 1), '%')
 above20_by_param$`Replicates >10% of samples?`        <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
 above20_by_param$`Are <10% of replicates high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
 } else {
