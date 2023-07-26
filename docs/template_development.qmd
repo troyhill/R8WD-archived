@@ -34,7 +34,7 @@ Tribal_org    <- c('SRSTEPA')  # c("WYDEQ_WQX", "WYDEQ_WATERSHED")
 start_date    <- '01-01-2015'
 end_date      <- '12-31-2022'
 params_to_use <- c(1:length(params$params))
-field_only    <- FALSE # if FALSE, lab blanks/reps are included in tables 1 and 2.
+field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 1 and 2.
 ```
 
 ```{r}
@@ -317,14 +317,26 @@ if (nrow(allSummary$blank_proc) == 0) {
  blank_plot <- ggplot()
 } else {
 allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
+blank_perf  <- allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ]
+blank_perf$`Performance target met?` <- ifelse(blank_perf$ResultMeasureValue > blank_perf$DetectionQuantitationLimitMeasure.MeasureValue, 'No', 'Yes')
+blank_perf$`Performance target met?`[is.na(blank_perf$`Performance target met?`)] <- 'No MDL reported'
+blank_perf$`Performance target met?` <- ordered(x = blank_perf$`Performance target met?`, levels = c('No', 'Yes', 'No MDL reported'))
 
-blank_plot <- ggplot(allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ], aes(x = date, y = ResultMeasureValue)) +
-  geom_line(linetype = 2) + geom_point() + 
-  facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
-  geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linetype = 1) +
-  geom_point(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', size = 0.5) +
-  labs(y = 'Field blank value', x = '')
+# blank_plot1 <- ggplot(blank_perf, aes(x = date, y = ResultMeasureValue)) +
+#   geom_line(linetype = 2) + geom_point() + 
+#   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
+#   geom_line(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', linetype = 1) +
+#   geom_point(aes(y = DetectionQuantitationLimitMeasure.MeasureValue, x = date), col = 'red', size = 0.5) +
+#   labs(y = 'Field blank level', x = '')
+blank_plot <- ggplot(blank_perf, aes(x = date, y = ResultMeasureValue)) +
+  geom_line(linetype = 2) + 
+  geom_point(aes(fill = `Performance target met?`), pch = 21, size = 3) + scale_fill_manual(values = c("red", "green", "gray")) +
+  theme_bw() + facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
+  labs(y = 'Field blank level', x = '') + theme(legend.position='bottom')
 }
+
+
+
 ```
 
 
@@ -388,17 +400,17 @@ if (nrow(param_yrs_wo_blank) == 0) {
 }
 blanks_expected$number_of_blanks[is.na(blanks_expected$number_of_blanks)] <- 0
 blanks_expected$ratio <- blanks_expected$number_of_blanks / blanks_expected$number_of_obs * 100
-blanks_expected$`Collection rate criterion met?` <- ifelse(blanks_expected$ratio < 10, 'No', 'Yes')
+blanks_expected$`Collection rate target met?` <- ifelse(blanks_expected$ratio < 10, 'No', 'Yes')
 
-blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ], aes(x = year, y = ratio)) + 
-  geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
+blank_ratio_plot <- ggplot(data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters) & !is.na(blanks_expected$ratio), ], aes(x = year, y = ratio)) + 
+  geom_point(aes(fill = `Collection rate target met?`), pch = 21, size = 3)+ 
   scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + 
   scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
   scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field blank collection rate') + xlab('') + geom_line(linetype = 3, col = 'gray60') + 
   theme(legend.position='bottom')
 
 ### is there a trend in blank collection rates over time:
-blank_lm <- summary(lm(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$ratio ~ blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$year))
+blank_lm <- summary(lm(ratio ~ year, data = blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters) & is.finite(blanks_expected$ratio), ]))
 blank_rsq   <- blank_lm$r.squared # r2 for time variable
 blank_pval  <- blank_lm$coefficients[8] # p-value for time variable
 blank_slope <- blank_lm$coefficients[2] # slope over time
@@ -503,14 +515,14 @@ blank_ratio_plot
 #| echo: false
 #| warning: false
 #| fig-width: 8
-#| fig-cap: Figure 4. Field blank performance for each analyte over time (black). Red points indicate detection limits for each analyte during each sampling event.
+#| fig-cap: Figure 4. Levels observed in field blanks for each analyte over time. Field blanks with undetectable levels satisfy this report's performance target and are shown as green points. Blanks with levels above the method detection limit (MDL) are shown in red. If no MDL was reported, blank data appear in gray.
 blank_plot
 ```
 
 
 ```{r}
 #| echo: false
-#| fig-cap: Table 1. Blank performance for each analyte. Rightmost two columns assess whether the project's blank collection rates and blank performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 1. A summary of blank data for each analyte over the entire period of record covered by this report. Rightmost two columns assess whether the project's blank collection rates and blank performance meet target criteria (green checks) or not (red 'X' marks).
 
 gt::tab_options(gt::gt(blank_table), table.font.size = 11)
 # kableExtra::kable_styling(kableExtra::kbl(blank_table, row.names = FALSE), bootstrap_options = c("striped", "hover"), font_size = 9)
@@ -598,10 +610,17 @@ Importantly, field replicates go through the entire sample handling and analysis
 
 Lab replicates are useful in assessing the precision of analytical procedures. Lab replication entails analyzing multiple subsamples from a single sample. The originating sample is reasonably assumed to be homogenous, and thus the generated data are expected to be identical if the analytical procedure is implemented consistently. Lab replicates therefore evaluate consistency in sample preparation and analysis, and are an important complement to field replicates.
 
-Replicate performance for a set of two samples can be calculated as the relative percent difference (RPD) between two replicates, $R1$ and $R2$:
-$$ RPD = {|R1-R2| \over (R1 + R2)/2} \cdot 100 $$
+Replicate performance for a set of two samples can be calculated as the relative percent difference (RPD) between two replicates, R1 and R2, as 
+
+$RPD = (|R_1 - R_2|)/((R_1+R_2)/2) \cdot 100$
+
+<!-- $$ RPD = {|R1-R2| \over (R1 + R2)/2} \cdot 100 $$ -->
+
 When a set of replicates has more than two samples, performance can be calculated as the coefficient of variation (CV), where $\sigma$ is the standard deviation and $\mu$ is the mean of the replicates:
-$$ CV = {\sigma \over \mu} \cdot 100 $$ 
+
+$CV = \sigma / \mu \cdot 100$
+
+<!-- $$ CV = {\sigma \over \mu} \cdot 100 $$  -->
 
 Replicate performance targets are typically 20% or lower. If replicates are more variable than a project's target, performance may be able to be improved by conducting sampling or laboratory activities more systematically and consistently. Guidance on replication rates are typically to collect one field replicate for every ten samples or at least one field replicate per sampling day, whichever results in greater replication. The one-per-ten guideline is also commonly used for laboratory replicates. Aside from these general guidelines, precision targets and replication rates should be a function of project characteristics. Projects that are controversial, costly, high-profile, or otherwise consequential for human or environmental health require high-quality data and may necessitate elevated rates of replication.
 
@@ -624,24 +643,24 @@ repDat$year            <- as.numeric(substr(repDat$ActivityStartDate, 1, 4))
 param_yrs_wo_reps <- plyr::ddply(repDat[, c('CharacteristicName', 'aver', 'year')], 
                          c('CharacteristicName', 'year'), plyr::summarise, 
                          number_of_reps       = sum(!is.na(aver)))
-tmpDat <- allSummary$data
-tmpDat$year <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+tmpDat        <- allSummary$data
+tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
 reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
                          c('CharacteristicName', 'year'), plyr::summarise, 
                          number_of_obs       = sum(!is.na(ResultMeasureValue)))
-reps_expected <- join_all(list(reps_expected, param_yrs_wo_reps))
+reps_expected <- plyr::join_all(list(reps_expected, param_yrs_wo_reps))
 reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
 reps_expected$ratio <- reps_expected$number_of_reps / reps_expected$number_of_obs * 100
-reps_expected$`Collection rate criterion met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
+reps_expected$`Collection rate target met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
 
-rep_ratio_plot <- ggplot(data = reps_expected, aes(x = year, y = ratio)) + 
-  geom_point(aes(fill = `Collection rate criterion met?`), pch = 21, size = 3)+ 
+rep_ratio_plot <- ggplot(data = reps_expected[!is.na(reps_expected$ratio), ], aes(x = year, y = ratio)) + 
+  geom_point(aes(fill = `Collection rate target met?`), pch = 21, size = 3)+ 
   scale_x_continuous(breaks = seq(1800, 2500, 1), minor_breaks = seq(1800, 2500, 1)) + #, guide = guide_axis(n.dodge = 2)) + 
-  scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName) + geom_hline(yintercept = 10, linetype = 2) +
+  scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName, scales = 'free_y') + geom_hline(yintercept = 10, linetype = 2) +
   scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field replicate collection rate') + xlab('') + geom_line(linetype = 3, col = 'gray60') + theme(legend.position='bottom') + theme(axis.text.x=element_text(size=rel(0.75)))
 
 ### is there a trend in blank collection rates over time:
-rep_lm <- summary(lm(reps_expected$ratio ~ reps_expected$year))
+rep_lm    <- summary(lm(ratio ~ year, data = reps_expected[is.finite(reps_expected$ratio), ]))
 rep_rsq   <- rep_lm$r.squared # r2 for time variable
 rep_pval  <- rep_lm$coefficients[8] # p-value for time variable
 rep_slope <- rep_lm$coefficients[2] # slope over time
@@ -719,7 +738,7 @@ fig3 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCod
 
 above20_by_param$tot_samples               <- tot_samples$`Total observations`[match(above20_by_param$CharacteristicName, tot_samples$CharacteristicName)]
 above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
-above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 0), '%')
+above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 1), '%')
 above20_by_param$`Replicates >10% of samples?`        <- ifelse(above20_by_param$rep_freq >= 10.0, "\u2705", "\u274C")
 above20_by_param$`Are <10% of replicates high-variation?` <- ifelse(above20_by_param$`Proportion above 20%` <= 10.0, "\u2705", "\u274C")
 } else {
@@ -820,7 +839,7 @@ Analytes that measure dissolved quantities (temperature, DO, ions) are expected 
 #| echo: false
 #| warning: false
 #| fig-width: 8
-#| fig-cap: Figure 5. Field replicate collection rates for each analyte over time. Red-filled points indicate replicate collection rates below the target 10% (dashed horizontal line); green-filled circles indicate parameter-years meeting the 10% target.
+#| fig-cap: Figure 5. Field replicate collection rates for each parameter and year. Point color indicates a comparison with this report's replicate collection rate target of 10% of relevant samples (dashed horizontal line). Parameter-years with less than the target 10% collection rate are shown in red; parameter-years satisfying the 10% target are shown in green. Note that y-axis range varies among facets.
 rep_ratio_plot
 ```
 
@@ -841,17 +860,38 @@ fig3
 #| echo: false
 #| warning: false
 #| fig-width: 8
-#| fig-cap: Figure 7. Field replicate performance over time for each parameter. Note that y-axis range varies among facets. A dashed horizontal line is shown in each facet at the 20% level for reference.
+#| fig-cap: Figure 7. Field replicate performance over time for each parameter, compared with this report's target of less than 20% variation (dashed horizontal line). Replicates with less than 20% variation satisfy this report's performance target and are shown as green points. Replicates exceeding this report's 20% variation target are shown in red. Note that y-axis range varies among facets.
 if (!any(complete.cases(allSummary$rep_proc))) {
   ggplot() + ggtitle('No replicates reported')
 } else {
 allSummary$rep_proc$date <- as.POSIXct(sapply(X = strsplit(allSummary$rep_proc$id, '__'), FUN = '[[', 6), format = '%Y-%m-%d')
 
-ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = date, y = RPD)) +
-  geom_line(linetype = 2) + geom_point() + scale_y_continuous(labels = function(x) paste0(x, "%")) +
-  facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
-  geom_hline(yintercept = 20, linetype = 3) +
-  labs(y = paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') # '(\u00b11SD)'
+field_rep_plot_data <- allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ]
+# field_rep_plot_data <- field_rep_plot_data[!is.na(field_rep_plot_data$RPD), ]
+field_rep_plot_data$`Performance target met?` <- ifelse(field_rep_plot_data$RPD > 20, 'No', 'Yes')
+field_rep_plot_data$`Performance target met?`[is.na(field_rep_plot_data$`Performance target met?`)] <- 'NA'
+field_rep_plot_data$`Performance target met?` <- ordered(x = field_rep_plot_data$`Performance target met?`, levels = c('No', 'Yes', 'NA'))
+
+
+### issue: code doesn't interpret ResultDetectionConditionText == 'Present Above Quantification Limit' - these appear as NAs
+### for SRST: 
+# tmp <- allSummary$rep_raw[grepl(x = allSummary$rep_raw$ActivityStartDate, pattern = '2016-08-11|2017-08-10'), ]
+# tmp2 <- tmp[grepl(x = tmp$MonitoringLocationIdentifier, pattern = 'SRSTEPA-SW-GR-2016-03|SRSTEPA-SW-GR-460-01'), ]
+# tmp2[tmp2$CharacteristicName %in% 'E_coli', ] # $ResultMeasureValue
+
+# rep_plot1 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = date, y = RPD)) +
+#   geom_line(linetype = 2) + geom_point() + scale_y_continuous(labels = function(x) paste0(x, "%")) +
+#   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
+#   geom_hline(yintercept = 20, linetype = 3) +
+#   labs(y = paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') # '(\u00b11SD)'
+rep_plot <- ggplot(field_rep_plot_data, aes(x = date, y = RPD)) +
+  geom_line(linetype = 2) + 
+  geom_point(aes(fill = `Performance target met?`), pch = 21, size = 3) + scale_fill_manual(values = c("red", "green", 'gray')) +
+  theme_bw() + facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
+   geom_hline(yintercept = 20, linetype = 3) +
+  labs(y =  paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') + theme(legend.position='bottom')
+
+rep_plot
 }
 
 ```
@@ -862,7 +902,7 @@ ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, patte
 #| echo: false
 #| warning: false
 #| label: Table2
-#| fig-cap: Table 2. Summary of replicate collection rates and performance by analyte. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 2. Summary of replicate collection rates and performance over the entire period of record covered by this report. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
 gt::tab_options(gt::gt(table2), table.font.size = 11)
 # knitr::kable(table2, row.names = FALSE)
 ```
