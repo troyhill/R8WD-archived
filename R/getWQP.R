@@ -11,8 +11,8 @@
 #' @importFrom dataRetrieval whatWQPsites
 #' @export
 
-getWQP <- function(organization = Tribal_org,
-                   characteristicName = params$params,
+getWQP <- function(organization, # = Tribal_org,
+                   characteristicName, # = params$params,
                    startDate = "01-01-2015",
                    endDate   = "12-31-2022",
                    multiplier = 0.5) {
