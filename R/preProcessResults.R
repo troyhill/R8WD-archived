@@ -66,6 +66,25 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
     }
   }
 
+  ### Replaces values with ResultDetectionConditionText == 'Present Above Quantification Limit'  & is.na(ResultMeasureValue)
+  ### with the quantitation limit (may be a better approach if more info is available)
+  # WQPQuery <- list(organization = 'SRSTEPA',
+  #                  characteristicName = 'Escherichia coli',
+  #                  startDate = '2016-08-10',
+  #                  endDate   = '2017-08-11')
+  # dat    <- dataRetrieval::readWQPdata(WQPQuery)
+  # tmp <- dat[grepl(x = dat$ActivityStartDate, pattern = '2016-08-11|2017-08-10'), ]
+  # tmp2 <- tmp[grepl(x = tmp$MonitoringLocationIdentifier, pattern = 'SRSTEPA-SW-GR-2016-03|SRSTEPA-SW-GR-460-01'), ]
+  # tmp2
+  if(any(grepl(x = names(data), pattern = 'ResultDetectionConditionText'))) {
+    for (i in 1:nrow(data)) {
+      if(grepl(x = tolower(data$ResultDetectionConditionText[i]), pattern = 'present above quantification limit')) {
+        data[, value_column][i] <- data[, DL_column][i]
+        cat('replaced observation ', i, '(', data$CharacteristicName[i], '; noted as above quant limit) with quantification limit ', data[, DL_column][i], '\n')
+      }
+    }
+  }
+
 
 
   ### replaces non-NA values below the MDL/PQL (set to zero or left as character) with multiplier*MDL/PQL
@@ -77,6 +96,9 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
       }
     }
   }
+
+
+
 
   if (convert_ug_to_mg) {
     cat(sum(grepl(x = tolower(data[, unit_column]), pattern = 'ug/l')), ' observations changed from ug/L to mg/L\n')
