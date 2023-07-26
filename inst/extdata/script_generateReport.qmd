@@ -597,7 +597,7 @@ Importantly, field replicates go through the entire sample handling and analysis
 
 Lab replicates are useful in assessing the precision of analytical procedures. Lab replication entails analyzing multiple subsamples from a single sample. The originating sample is reasonably assumed to be homogenous, and thus the generated data are expected to be identical if the analytical procedure is implemented consistently. Lab replicates therefore evaluate consistency in sample preparation and analysis, and are an important complement to field replicates.
 
-Replicate performance for a set of two samples can be calculated as the relative percent difference (RPD) between two replicates, R1 and R2, as 
+Replicate performance for a set of two samples can be calculated as the relative percent difference (RPD) between two replicates, R1 and R2, as:
 
 $RPD = (|R_1 - R_2|)/((R_1+R_2)/2) \cdot 100$
 
