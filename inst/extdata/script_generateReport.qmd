@@ -88,9 +88,9 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 #### Draft report generated on `r format(Sys.Date(), '%d %b %Y')` for internal use only
 
 ::: {layout="[[25,-30, 25],]"}
-![](`r img_path_epa`){width="250"}
+![](`r img_path_epa`){width="150"}
 
-![](`r img_path`){width="250"}
+![](`r img_path`){width="150"}
 :::
 
 
