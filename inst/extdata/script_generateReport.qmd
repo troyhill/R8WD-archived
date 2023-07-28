@@ -88,9 +88,9 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 #### Draft report generated on `r format(Sys.Date(), '%d %b %Y')` for internal use only
 
 ::: {layout="[[25,-30, 25],]"}
-![](`r img_path_epa`)
+![](`r img_path_epa`){width="250"}
 
-![](`r img_path`)
+![](`r img_path`){width="250"}
 :::
 
 
@@ -444,6 +444,7 @@ if (any(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_paramete
   year_blank_message <- paste0(year_blank_message, " ", sum(blanks_expected[!(blanks_expected$CharacteristicName %in% sonde_parameters), ]$number_of_blanks == 0), ' parameter-years had lab data without corresponding blank data (', fragments, '; see points with 0% collection rates in Figure 3). Quality control measures should always be collected when samples are collected.')
 } else {
   ' Although not every lab parameter may be measured every year, every parameter-year combination that had data reported for this project also had some blank data reported.'
+  tst <- data.frame()
 }
 
 ### check for sonde data that have blanks
