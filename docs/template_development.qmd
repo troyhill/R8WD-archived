@@ -2,18 +2,18 @@
 title: ""
 editor: 
   mode: source
-# format: docx
-# always_allow_html: yes
-format:
-  html:
-    embed-resources: true # required for html images
-    smooth-scroll: true
-    theme: cosmo
-    fontcolor: black
-    toc: true
-    toc-location: left
-    toc-title: Table of Contents
-    toc-depth: 3
+format: docx
+always_allow_html: yes
+# format:
+#   html:
+#     embed-resources: true # required for html images
+#     smooth-scroll: true
+#     theme: cosmo
+#     fontcolor: black
+#     toc: true
+#     toc-location: left
+#     toc-title: Table of Contents
+#     toc-depth: 3
 ---
     
 ```{r}
@@ -98,12 +98,12 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 
 ## Quality Control Data Assessment Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
 
-#### Draft report generated on `r format(Sys.Date(), '%d %b %Y')` for internal use only
+#### Draft report generated on `r format(Sys.Date(), '%d %B %Y')` for internal use only
 
-::: {layout="[[25,-30, 25],]"}
-![](`r img_path_epa`){width="150" fig-align="left"}
+::: {layout="[[15,-25, 15],]"}
+![](`r img_path_epa`){width="100" fig-align="left"}
 
-![](`r img_path`){width="150" fig-align="right"}
+![](`r img_path`){width="100" fig-align="right"}
 :::
 
 
