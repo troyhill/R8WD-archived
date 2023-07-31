@@ -51,12 +51,6 @@ create_map_alt <- function(.data, parameter = 'Temperature', parameterColumn = '
     sumdat$radius <- ifelse(sumdat$Sample_Count>500,20,sumdat$radius)
     sumdat$radius <- ifelse(sumdat$Sample_Count>1500,30,sumdat$radius)
 
-    site_legend <- subset(site_size, site_size$Point_size %in% unique(sumdat$radius))
-
-    pal <- leaflet::colorBin(
-      palette = "Blues",
-      domain = sumdat$Parameter_Count)
-
     map <- leaflet::leaflet()%>%
       leaflet::addProviderTiles("Esri.WorldTopoMap", group = "World topo",
                                 options = leaflet::providerTileOptions(updateWhenZooming = FALSE,updateWhenIdle = TRUE)) %>%
@@ -74,6 +68,7 @@ create_map_alt <- function(.data, parameter = 'Temperature', parameterColumn = '
                                   # fillColor =~ pal(Parameter_Count),
                                   fillOpacity = 0.2,
                                   stroke = TRUE, weight = 1.5,
+                                  radius = 3, # default is 10
                                   # radius=sumdat$radius,
                                   popup = paste0("Site ID: ", sumdat$MonitoringLocationIdentifier,
                                                  "<br> Site Name: ", sumdat$MonitoringLocationName,
