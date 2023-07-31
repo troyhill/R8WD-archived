@@ -83,7 +83,8 @@ img_path_epa <- file.path(system.file('extdata', package = 'R8WD'), 'seals', 'ep
 ```
 
 
-## Quality Control Data Assessment Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program
+## Quality Control Data Assessment Report for the `r allSummary$data$OrganizationFormalName[1]` CWA106 Program (`r substr(head(allSummary$data$ActivityStartDate, 1), 1, 4)` - `r substr(tail(allSummary$data$ActivityStartDate,1), 1, 4)`)
+
 
 #### Draft report generated on `r format(Sys.Date(), '%d %B %Y')` for internal use only
 
