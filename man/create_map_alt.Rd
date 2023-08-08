@@ -6,7 +6,8 @@
 \usage{
 create_map_alt(
   .data,
-  parameter = "Temperature",
+  type = "circle",
+  parameter = NA,
   parameterColumn = "CharacteristicName",
   digits = 3
 )
@@ -14,7 +15,9 @@ create_map_alt(
 \arguments{
 \item{.data}{full WQP data frame with site location data}
 
-\item{parameter}{optional input if user wants to map mean values for a parameter}
+\item{type}{type of map to generate (i.e. simple map or circle marker map)}
+
+\item{parameter}{optional input if user wants to map mean values for a parameter (by default plots all available parameters)}
 
 \item{parameterColumn}{name of the column with parameter names (not likely to require adjustment)}
 
