@@ -112,12 +112,8 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
         .data$map_sampling_loc_label = gsub(pattern = ml_sites[i], replacement = new_label, .data$MapSamplingLocLabel)
       }
       
-      exp_map <- leaflet::leaflet()%>%
-        leaflet::addProviderTiles("Esri.WorldTopoMap", group = "World topo",
-                                  options = leaflet::providerTileOptions(updateWhenZooming = FALSE,updateWhenIdle = TRUE)) %>%
-        # get rid of whatever was there before if loading a second dataset
-        leaflet::clearShapes() %>%
-        leaflet::addMarkers(data = .data, lat = as.numeric(turtlemt$LatitudeMeasure), lng = as.numeric(turtlemt$LongitudeMeasure),
+      map <- map %>%
+        leaflet::addMarkers(data = .data, lat = as.numeric(.data$LatitudeMeasure), lng = as.numeric(.data$LongitudeMeasure),
                             icon =~ locationTypeIcons[MapSamplingLocLabel], popup = data_callout_text)
     
     # add circle markers to the map
