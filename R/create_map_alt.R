@@ -50,7 +50,8 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
       dplyr::group_by(MonitoringLocationIdentifier, MonitoringLocationName, LatitudeMeasure, LongitudeMeasure) %>%
       dplyr::summarise("Sample_Count" = length(unique(ActivityIdentifier)),
                        "Visit_Count" = length(unique(ActivityStartDate)),
-                       "Parameter_Count" = length(unique(CharacteristicName)))
+                       "Parameter_Count" = length(unique(CharacteristicName)),
+                       "Label_Type" = MapSamplingLocLabel)
     
 
     map <- leaflet::leaflet()%>%
@@ -66,37 +67,29 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
     if (type == "simple") {
       locationTypeIcons <- leaflet::iconList(
         well <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/108681/waterbucket",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'well-24.png'),
+          iconWidth = 24, iconHeight = 24),
         river = leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/Sko9KOAEka9m/river",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'river-24.png'),
+          iconWidth = 24, iconHeight = 24),
         reservoir <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/5oSkgVLPmxoy/lake",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'reservoir-24.png'),
+          iconWidth = 24, iconHeight = 24),
         land <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/5289/field",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'land-24.png'),
+          iconWidth = 24, iconHeight = 24),
         surface <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/118933/water",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'surface-24.png'),
+          iconWidth = 24, iconHeight = 24),
         groundwater <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/HwUWSXl485Gm/aquifer",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'groundwater-24.png'),
+          iconWidth = 24, iconHeight = 24),
         anthropogenic <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/ZtBqk2QyikOg/sewer",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94),
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'anthropogenic-24.png'),
+          iconWidth = 24, iconHeight = 24),
         wetlands <- leaflet::makeIcon(
-          iconUrl = "https://icons8.com/icon/d0nI5W8O8oAv/swamp",
-          iconWidth = 38, iconHeight = 95,
-          iconAnchorX = 22, iconAnchorY = 94))
+          iconUrl = file.path(system.file('extdata', package = 'R8WD'), 'markericons', 'wetlands-24.png'),
+          iconWidth = 24, iconHeight = 24))
       
       data_callout_text <- paste0("Site ID: ", sumdat$MonitoringLocationIdentifier,
                                   "<br> Site Name: ", sumdat$MonitoringLocationName,
@@ -113,8 +106,9 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
       }
       
       map <- map %>%
-        leaflet::addMarkers(data = .data, lat = as.numeric(.data$LatitudeMeasure), lng = as.numeric(.data$LongitudeMeasure),
-                            icon =~ locationTypeIcons[MapSamplingLocLabel], popup = data_callout_text)
+        leaflet::clearShapes() %>%
+        leaflet::addMarkers(data = sumdat, lat = as.numeric(sumdat$LatitudeMeasure), lng = as.numeric(sumdat$LongitudeMeasure),
+                            icon =~ locationTypeIcons[Label_Type], popup = data_callout_text)
     
     # add circle markers to the map
     } else if (type == "circle") {
