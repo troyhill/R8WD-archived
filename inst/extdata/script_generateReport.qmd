@@ -224,7 +224,7 @@ The 'Supporting Data' section near the end of this report includes the data file
 ```{r}
 #| echo: false
 # create_map(tribeData2)
-create_map_alt(tribeData2, parameter = NA)
+create_map(tribeData2)
 ```
 :::
 Figure 1. Map of sampling locations included in this report.
