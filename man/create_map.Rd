@@ -10,7 +10,8 @@ create_map(
   cluster = FALSE,
   parameter = NA,
   parameterColumn = "CharacteristicName",
-  digits = 3
+  digits = 3,
+  radius_arg = 3
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ create_map(
 \item{parameterColumn}{name of the column with parameter names (not likely to require adjustment)}
 
 \item{digits}{digits used for displaying rounded data}
+
+\item{radius_arg}{radius of points displayed in the 'basic circle' plot type.}
 }
 \value{
 an interactive map of sample locations displayed as a Leaflet plot
