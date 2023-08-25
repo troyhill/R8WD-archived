@@ -26,6 +26,7 @@ summarizeQC <- function(data) {
   ### - data with field reps averaged and blanks removed
 
   ### TODO: make this handle all varieties of blanks, not just lab and field.
+  ### TODO: some organizations do appear to identify both reps as QC samples. They may do so inconsistently. handle these cases better. UTEMTN
   ### TODO: incorporate other QC measures (matrix spikes?)
   ### TODO: find a dataset with lab reps to see if the function mishandles anything (e.g., what is behavior if a field rep is also lab repped? How are lab reps linked to parent sample?)
 
@@ -40,10 +41,42 @@ summarizeQC <- function(data) {
   ### including ActivityDepthHeightMeasure.MeasureValue in the ID avoids counting depth profiles as replicates (sometimes n = 17)
   ### still consistently seeing more than n=2 reps
   tmpDat           <- data[!grepl(x = data$ActivityTypeCode, pattern = 'Quality Control Sample-Field Blank|Quality Control Sample-Lab Blank'), ]
-  indicator_vector <- paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__", tmpDat$ActivityDepthHeightMeasure.MeasureValue, "__",tmpDat$ActivityStartDate)
-  tmpDat$id        <- indicator_vector
-  tmpDat           <- tmpDat[tmpDat$id %in% indicator_vector[duplicated(indicator_vector)], ]
   tmpDat$year      <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+  ### old approach: grouping reps by unique org-site-date-parameter-depth combos
+  indicator_vector <- paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__", tmpDat$ActivityDepthHeightMeasure.MeasureValue, "__",tmpDat$ActivityStartDate)
+
+  ### new approach: use group-defined reps, find nearest non-rep observation in time
+  rep_numbers <- grep(x = tmpDat$ActivityTypeCode, pattern = 'Quality Control Sample-Field Replicate')
+  ### find paired sample for each designated replicate
+  rep_ids          <- indicator_vector[rep_numbers] # routine samples should have the same id, then find the closest in time
+  tmpDat$id        <- indicator_vector
+  ### old approach: identify reps without relying on correct ActivityTypeCode
+  # tmpDat           <- tmpDat[tmpDat$id %in% indicator_vector[duplicated(indicator_vector)], ]
+  ### new approach: insist on ActivityTypeCode
+  tmpDat           <- tmpDat[tmpDat$id %in% rep_ids, ]
+  rep_table <- table(tmpDat$id)
+  more_than_two_reps <- unique(tmpDat$id)[unique(tmpDat$id) %in% names(rep_table[rep_table > 2])] # reps with >2 samples. 134/1394
+  # match(more_than_two_reps, more_than_two_reps[i])
+  ### now identify rep using nearest timestamp. There are some NAs for times - in those cases, return everything and use the CV
+  for (i in 1:length(more_than_two_reps)) {
+    ### odd situation with Turtle Mountain Environmental Office__TURTLEMT__TURTLEMT-SHUTTEBEACH__Escherichia coli__NA__2019-06-19 (n = 3)
+    sub_df <- tmpDat[tmpDat$id %in% more_than_two_reps[i], ]
+    tmpDat <- tmpDat[!(tmpDat$id %in% more_than_two_reps[i]), ] # remove subset
+    ### find the non-QC sample collected nearest in time to the QC sample
+    if (any(is.na(sub_df$ActivityStartDateTime))) {
+      ### if times aren't entered, we can't make a determination. leave everything
+      sub_df <- sub_df
+    } else {
+      target_time <- sub_df$ActivityStartDateTime[grep(x = sub_df$ActivityTypeCode, pattern = 'Quality Control Sample-Field Replicate')][1]
+      ### remove all but the most likely rep value
+      sub_df <- sub_df[-c(which.max(sub_df$ActivityStartDateTime - target_time)), ] # which.max(c(0, 10, 10)) selects the first max value encountered
+    }
+    # cat(i)
+    tmpDat <- rbind(tmpDat, sub_df)
+    rm(sub_df)
+  }
+  IDs_to_remove <- paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__", tmpDat$ActivityDepthHeightMeasure.MeasureValue, "__",tmpDat$ActivityStartDate, "__", tmpDat$ActivityStartTime.Time)
+  ### end new approach
 
   ### Identify lab reps
   lab.reps                <- tmpDat$id[grepl(x = tmpDat$ActivityTypeCode, pattern = 'Quality Control Sample-Lab Duplicate')]
@@ -52,7 +85,9 @@ summarizeQC <- function(data) {
   tmpDat           <- tmpDat[order(tmpDat$OrganizationFormalName, tmpDat$ActivityStartDate, tmpDat$MonitoringLocationIdentifier, tmpDat$CharacteristicName), ]
 
   ### Create dataset with averaged reps instead of both reps (double-counting in any stats)
-  returnDat <- data[which(!duplicated(indicator_vector)), ]
+  # returnDat <- data[which(!duplicated(indicator_vector)), ]
+  detailed_IDs <- paste0(data$OrganizationFormalName,"__", data$OrganizationIdentifier, '__', data$MonitoringLocationIdentifier, "__", data$CharacteristicName, "__", data$ActivityDepthHeightMeasure.MeasureValue, "__",data$ActivityStartDate, "__", data$ActivityStartTime.Time)
+  returnDat    <- data[which(!detailed_IDs %in% IDs_to_remove), ]
 
 
   ### determine whether to use RPD or CV (are all reps pairs or are there cases with n>2?)

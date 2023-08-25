@@ -20,7 +20,7 @@
 create_report <- function(org = 'TURTLEMT',
                           startDate = '01-01-2015',
                           endDate   = '12-31-2022',
-                          parameters = c(1:length(params$params)),
+                          parameters = 1:11,
                           extFile = 'script_generateReport.qmd',
                           prompt_user = TRUE,
                           output = 'html',

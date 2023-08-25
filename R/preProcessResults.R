@@ -37,7 +37,9 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
     data[, value_column] <-  gsub(x = trimws(data[, value_column]), pattern = "^nm$|^NM$", replace = NA)
   }
 
-  ### modify detection limits input as '<X' - replace with X. This appears in WYDEQ_WATERSHED/WQX data
+  ### modify detection limits input as '<X' or '< than X' - replace with X. This appears in WYDEQ_WATERSHED/WQX data
+  data[, value_column] <-  gsub(x = data[, value_column], pattern = 'than', replacement = '')
+
   n_less_than <- length(grep(x = trimws(data[, DL_column]), pattern = "<"))
   if ((length(n_less_than) > 0) & (n_less_than > 0)) {
     cat(n_less_than, ' detection limit values had less-than symbols; replaced with lowest detectable value (e.g., a detection limit of "<1 mg/L" becomes "1 mg/L")\n')
@@ -47,7 +49,7 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
   ### modify non-detects to be function of detection limit
   if (!is.numeric(data[, value_column])) {
     for (i in 1:nrow(data)) {
-      if(grepl(x = data[, value_column][i], pattern = "Non-detect|^0$|<") && !is.na(data[, DL_column][i])) {
+      if(grepl(x = data[, value_column][i], pattern = "Non-detect|^ND$|^0$|<") && !is.na(data[, DL_column][i])) {
         ### TODO: how to handle cases without DL/QL listed? use average MDL for the parameter and add data flag?
         data[, value_column][i] <- multiplier * data[, DL_column][i]
         ### the above may be inaccurate for values that are entered as less than the lower end of a calibration curve.
@@ -85,8 +87,6 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
     }
   }
 
-
-
   ### replaces non-NA values below the MDL/PQL (set to zero or left as character) with multiplier*MDL/PQL
   if (is.numeric(data[, value_column])) {
     for (i in 1:nrow(data)) {
@@ -97,15 +97,26 @@ preProcessResults <- function(data, multiplier = 0.5, value_column = 'ResultMeas
     }
   }
 
-
-
-
   if (convert_ug_to_mg) {
     cat(sum(grepl(x = tolower(data[, unit_column]), pattern = 'ug/l')), ' observations changed from ug/L to mg/L\n')
     data[, value_column][grep(x = tolower(data[, unit_column]), pattern = 'ug/l')] <- as.numeric(data[, value_column][grep(x =  tolower(data[, unit_column]), pattern = 'ug/l')]) / 1e3
     data[, unit_column][grep(x = tolower(data[, unit_column]), pattern = 'ug/l')] <- 'mg/L'
   }
 
+  ### note if NAs are produced, to facilitate further development
+  current_NAs <- sum(is.na(data[, value_column]))
+  future_NAs  <- sum(is.na(as.numeric(data[, value_column])))
+
+  if (future_NAs > current_NAs) {
+    # result of '10.9-0' for Dissolved oxygen (DO) LWRBRULE-MCE-21-081215 2015-08-12? Should rightfully be converted to NA
+    # tribeData1[grep(x = tribeData1$ResultMeasureValue, pattern = '10.9-0'), ]
+    # "22.1ml", "0.2mg/l", "7.6-61.2", "Absent"
+    values_converted_to_NAs <- na.omit(data[, value_column])[is.na(as.numeric(na.omit(data[, value_column])))]
+    cat('\nConversion to numeric resulted in ', future_NAs - current_NAs, ' NAs introduced by coercion. Replaced values include: \n',
+        paste0(unique(values_converted_to_NAs), collapse = '; '), ' \n'
+        )
+
+  }
   ### convert values from character to numeric
   data[, value_column] <- as.numeric(data[, value_column])
 

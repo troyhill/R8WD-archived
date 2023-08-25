@@ -12,7 +12,7 @@
 #' @export
 
 getWQP <- function(organization, # = Tribal_org,
-                   characteristicName, # = params$params,
+                   characteristicName = params$params[1:11],
                    startDate = "01-01-2015",
                    endDate   = "12-31-2022",
                    multiplier = 0.5) {
@@ -27,6 +27,6 @@ getWQP <- function(organization, # = Tribal_org,
 
   dat.comb <- R8WD::joinWQPProfiles(dat, dat.sd)
 
-  dat2 <- R8WD::preProcessResults(dat.comb, multiplier = multiplier)
+  dat2 <- R8WD::preProcessResults(data = dat.comb, multiplier = multiplier)
   invisible(dat2)
 }
