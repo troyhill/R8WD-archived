@@ -24,7 +24,6 @@ params_to_use <- c('REPLACE_PARAMS')
 field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 2 and 3.
 ```
 
-
 ```{r}
 #| echo: false
 #| output: false
@@ -310,10 +309,14 @@ tmp <- table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc
 tmp_by_param <- data.frame(table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)], allSummary$blank_proc$CharacteristicName))
 
 
-### if TN is always a calculated value, exclude it from total samples
-if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated'))) {
+### if TN is a calculated value, exclude it from total samples
+TN_calculated   <- FALSE
+# if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated'))) {
+if (any(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) %in% c('Calculated', "AWQMS-CALC TN"))) {
+  TN_calculated <- TRUE
   sonde_parameters <- c(sonde_parameters, 'TN')
 }
+
 
 number_of_lab_blanks <- ifelse(any(grepl(x = names(tmp), pattern = 'Lab')), sum(tmp[grepl(x = names(tmp), pattern = 'Lab')]), 0)
 number_of_field_blanks <- ifelse(any(!grepl(x = tmp_by_param$Var2, pattern =  paste0(sonde_parameters, collapse = '|'))), sum(tmp_by_param$Freq[!grepl(x = tmp_by_param$Var2, pattern = paste0(sonde_parameters, collapse = '|'))]), 0)
@@ -709,7 +712,7 @@ if (any(reps_expected$number_of_reps == 0)) {
 
 TN_note <- NULL
 ### add a note if TN is a calculated quantity
-if (('TN' %in% parameters_with_zero_reps) && (any(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) %in% c('Calculated', "AWQMS-CALC TN")))) {
+if (('TN' %in% parameters_with_zero_reps) && TN_calculated) {
   TN_note <- 'Although TN is identified as a calculated parameter in this study, replicate values should be calculated and reported in WQP. Replicates can be calculated using replicate data for the component compounds (TKN-N, NH3-N, NO3+NO2-N).'
 } 
 # else if (!('TN' %in% parameters_with_zero_reps) && (any(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) %in% c('Calculated', "AWQMS-CALC TN")))) {
@@ -823,7 +826,7 @@ if (number_of_field_reps == 0) {
 } else if (number_of_field_reps < 0.10*samples_for_rep_comparison) {
   field_rep_rec <- paste0('**Field replicates** appear in the data reported to WQP at a rate of ', round(number_of_field_reps / samples_for_rep_comparison*100), '% of all samples. Recommendations include ensuring that replicates are reported comprehensively and increasing replicate collection rates to at least 10% of the data for each parameter. Including replicate collection rates for each parameter in project progress reports would be an effective way to track improvement in this metric.')
 }else if (number_of_field_reps >= 0.10*samples_for_rep_comparison) {
-  field_rep_rec <- paste0("**Field replicates** represent ", round(number_of_field_reps / samples_for_rep_comparison*100), "% of all samples (excluding sonde data), satisfying this report's target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.")
+  field_rep_rec <- paste0("**Field replicates** represent ", round(number_of_field_reps / samples_for_rep_comparison*100), "% of all samples, satisfying this report's target level of 10%. Project Managers are commended for their high level of effort and reporting on this quality metric.")
 }
 rec_list$field_rep <- field_rep_rec
 
@@ -1036,4 +1039,3 @@ downloadthis::download_file(path = rep_file,
 In preparing data for analysis, values below reporting limits were treated numerically as half of the reporting limit (e.g., a value reported as \'<1 mg`r "\U22C5"`L^-1^\' would be treated as \'0.5 mg`r "\U22C5"`L^-1^\'). Estimated values above a maximum value were treated as equivalent to the maximum known value (e.g., a value reported as \'>250 mg`r "\U22C5"`L^-1^\' would be treated as \'250 mg`r "\U22C5"`L^-1^\'). Data users should consult the raw data available from WQP to determine if any of these issues apply in the data described in this report. Future data users are encouraged to address estimated values and non-detects in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). 
 
 Several other adjustments and assumptions were made prior to analysis. All pH data were converted from log-scale pH values to molar H^+^ concentrations ($[H^{+}] = 10^{-pH}$) before any analyses were performed, and then converted back ($pH = -log_{10}[H^{+}]$) to unitless pH values for visualization and reporting. The WQP characteristics 'Ammonia', 'Ammonia and ammonium', and 'Ammonia-nitrogen' were treated as interchangeably representing NH~3~-N levels. Similarly, WQP data for the characteristics 'Temperature' and 'Temperature, water' were treated as interchangeable measures of water temperature (air temperatures were assumed to be input as 'Temperature, air'). The WQP characteristics 'Nitrate' and 'Nitrate + Nitrite' were treated as distinct quantities for this report. The WQP characteristics used for total nitrogen (TN) and total phosphorus (TP) were 'Total Nitrogen, mixed forms' and 'Total Phosphorus, mixed forms,' respectively.
-
