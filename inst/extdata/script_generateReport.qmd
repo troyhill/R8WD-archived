@@ -24,6 +24,7 @@ params_to_use <- c('REPLACE_PARAMS')
 field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 2 and 3.
 ```
 
+
 ```{r}
 #| echo: false
 #| output: false
@@ -216,7 +217,7 @@ The 'Supporting Data' section near the end of this report includes the data file
 <!--   webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport") -->
 <!-- # } -->
 <!-- ``` -->
-<!-- ::: -->
+:::
 
 
 ::: {.content-hidden when-format="docx"}
@@ -532,7 +533,9 @@ rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_
 if (length(sonde_params_with_blanks) > 0) {
   sonde_blank_issues    <- paste0("- **Data review suggestion:** The presence of ", sonde_params_with_blanks, " data labeled as blanks deserves review to determine whether these are actually routine samples. ", 
                                   ifelse(any(MDL_check$all_NAs), " The absence of reporting limits in metadata for these samples is supportive of possible mis-characterization. ", "")
-                                  , " Project staff are encouraged to review these data to evaluate whether they should be labeled as blanks. If they are correctly identified as blanks, reporting limits should be added to the WQP metadata.")
+                                  , " Project staff are encouraged to review these data to evaluate whether they should be labeled as blanks.")
+  if (exists('sonde_params_with_blanks_but_no_MDLs')) {
+    sonde_blank_issues    <- paste0(sonde_blank_issues, " If these data are correctly identified as blanks, reporting limits should be added to the WQP metadata.")                                    }
 } else {
   sonde_blank_issues    <- ""
 }
@@ -602,9 +605,27 @@ Guidance on replication rates are typically to collect one field replicate for e
 #| echo: false
 #| warning: false
 #| message: false
-
 replicate_variation_tolerance <- 30
+tmpDat        <- allSummary$data
+tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
+# ### which of these year-parameter combos have reps collected?
+repDat                 <- allSummary$rep_proc
+repDat$year            <- as.numeric(substr(repDat$ActivityStartDate, 1, 4))
+param_yrs_wo_reps <- plyr::ddply(repDat[, c('CharacteristicName', 'aver', 'year')],
+                         c('CharacteristicName', 'year'), plyr::summarise,
+                         number_of_reps       = sum(!is.na(aver)))
+reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')],
+                         c('CharacteristicName', 'year'), plyr::summarise,
+                         number_of_obs       = sum(!is.na(ResultMeasureValue)))
+reps_expected <- plyr::join_all(list(reps_expected, param_yrs_wo_reps))
+reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
+reps_expected$ratio <- reps_expected$number_of_reps / reps_expected$number_of_obs * 100
+reps_expected$`Collection rate target met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
 
+parameters_with_missing_reps <- unique(reps_expected$CharacteristicName[(reps_expected$number_of_reps == 0)])
+
+
+if (nrow(allSummary$rep_summary) > 1) {
 rep_object <- create_qc_visuals(dataset = allSummary, 
                           form = 'rep', 
                           summaryPeriod = plot_summary_period,
@@ -613,43 +634,16 @@ rep_object <- create_qc_visuals(dataset = allSummary,
                           field_only = TRUE, 
                           replicate_variation_threshold = 20,
                           replicate_variation_tolerance = replicate_variation_tolerance)
-
-
-# ### which of these year-parameter combos have reps collected?
-repDat                 <- allSummary$rep_proc
-repDat$year            <- as.numeric(substr(repDat$ActivityStartDate, 1, 4))
-param_yrs_wo_reps <- plyr::ddply(repDat[, c('CharacteristicName', 'aver', 'year')],
-                         c('CharacteristicName', 'year'), plyr::summarise,
-                         number_of_reps       = sum(!is.na(aver)))
-tmpDat        <- allSummary$data
-tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
-reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')],
-                         c('CharacteristicName', 'year'), plyr::summarise,
-                         number_of_obs       = sum(!is.na(ResultMeasureValue)))
-reps_expected <- plyr::join_all(list(reps_expected, param_yrs_wo_reps))
-reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
-reps_expected$ratio <- reps_expected$number_of_reps / reps_expected$number_of_obs * 100
-reps_expected$`Collection rate target met?` <- ifelse(reps_expected$ratio < 10, 'No', 'Yes')
-# 
-# rep_ratio_plot <- ggplot(data = reps_expected[!is.na(reps_expected$ratio), ], aes(x = year, y = ratio)) + 
-#   geom_point(aes(fill = `Collection rate target met?`), pch = 21, size = 3)+ 
-#   scale_x_continuous(breaks = seq(1800, 2500, 2), minor_breaks = seq(1800, 2500, 1)) + #, guide = guide_axis(n.dodge = 2)) +
-#   scale_fill_manual(values = c("red", "green")) + theme_bw() + facet_wrap(. ~ CharacteristicName, scales = 'free_y') + geom_hline(yintercept = 10, linetype = 2) +
-#   scale_y_continuous(labels = function(x) paste0(x, "%"))  + ylab('Field replicate collection rate') + xlab('') +
-#   # geom_line(linetype = 3, col = 'gray60') + 
-#   theme(legend.position='bottom') + theme(axis.text.x=element_text(size=rel(0.75)))
-
-### missing reps during the aggregation period used for the figure above (years, months, sampling days)
-# tmpDat        <- allSummary$data
-# tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
-# reps_expected <- plyr::ddply(tmpDat[, c('CharacteristicName', 'ResultMeasureValue', 'year')], 
-#                          c('CharacteristicName', 'year'), plyr::summarise, 
-#                          number_of_obs       = sum(!is.na(ResultMeasureValue)))
-# reps_expected$number_of_reps[is.na(reps_expected$number_of_reps)] <- 0
-parameters_with_missing_reps <- unique(reps_expected$CharacteristicName[(reps_expected$number_of_reps == 0)])
+} else {
+  rep_object <- list(table = data.frame(Analyte = unique(reps_expected$CharacteristicName), 
+                                        n = 0), 
+                     collection_rate_plot = ggplot() + ggplot2::ggtitle('No replicates reported in WQP'), 
+                     performance_plot = ggplot() + ggplot2::ggtitle('No replicates reported in WQP'))
+  names(rep_object$table)[2] <- 'Number of replicate sets'
+  parameters_with_missing_reps <- unique(allSummary$data$CharacteristicName)
+}
 
 rep_ratio_plot <- rep_object$collection_rate_plot
-
 ```
 
 
@@ -724,11 +718,10 @@ if (('TN' %in% parameters_with_zero_reps) && (any(unique(allSummary$data[allSumm
 
 ```
 
-Over the period of record used for this report, `r tribe_name` collected `r number_of_field_reps` sets of field replicates. Field replicates amounted to `r round(number_of_field_reps/ samples_for_rep_comparison*100, 1)`% of all samples. Table 3 shows aggregate replication rates and performance for each parameter during `r year_range`. Figure 
+Over the period of record used for this report, `r tribe_name` collected `r number_of_field_reps` sets of field replicates. Field replicates amounted to `r round(number_of_field_reps/ samples_for_rep_comparison*100, 1)`% of all samples. Table 3 shows aggregate replication rates and performance for each parameter during `r year_range`. Figures 4 and 5 show each parameter's replication rates and performance in more detail.
 
 `r variation_measure_message`
 
-In comparison to the 20% target level of variation, replicate`r ifelse(reps_pct_above20 <= 10, 's overwhelmingly met that threshold', ifelse(reps_pct_above20 <= 25, ' performance had occasional exceedances', ifelse(reps_pct_above20 <= 50, 's were more variable than expected', ifelse(reps_pct_above20 > 50, ' performance suggests opportunities for improvement'))))`. `r summary_reps_above20`
 
 `r year_rep_message`
 
@@ -848,7 +841,7 @@ rec_list$field_rep <- field_rep_rec
 
 ### Inconsistent rep collection (over time and among parameters)
 if (exists('tst_rep') && (length(apply(X = tst_rep, MARGIN = 1, FUN = paste0, collapse = ' in ')) > 0)) {
-  rep_collection_consistency_time <- paste0('**Field replicate coverage:** Field replicates were not routinely collected and were not present for all parameters in every year. Specifically, ', sentencify(unique(tst_rep$CharacteristicName)), " each had years without collection of field replicates. Replicates should be collected at least once per 10 samples for every parameter, or as described in the project's QAPP. Documenting replicate collection rates in project progress reports is recommended as a way to track and improve coverage.")
+  rep_collection_consistency_time <- paste0('**Field replicate coverage:** Field replicates were not always reported when data were collected. Specifically, ', sentencify(unique(tst_rep$CharacteristicName)), " each had years without collection of field replicates. Replicates should be collected at least once per 10 samples for every parameter, or as described in the project's QAPP. Documenting replicate collection rates in project progress reports is recommended as a way to track and improve coverage.")
 } else {
   rep_collection_consistency_time <- paste0("**Field replicate coverage:** Field replicate data were collected very consistently, including at least some replicates for every parameter in every year with routine data collection. ", ifelse(number_of_field_reps < 0.10*samples_for_rep_comparison, "Although there may be room for improvement to hit the taget 10% rate for all parameters, t", "T"), "he presence of these data commendable and demonstrates the project staff's strong commitment to quality control.")
 }
@@ -877,12 +870,12 @@ rec_list$rep_issues     <- paste0('**Field replicate performance:** Overall, ', 
 ### General questions, possible data issues
 ### note data with exceptionally high variation (>=100%) between reps. Folks can ignore this if they feel it's relevant far in the past
 
-if (reps_above100 > 0) {
+if (exists('reps_above100') && (reps_above100 > 0)) {
   rec_list$rep_issues     <- paste0(rec_list$rep_issues, "\n\n", "- **Data review suggestion:** The dataset includes ", reps_above100," replicate sets with exceptionally high levels of variation (over 100%). Highly variable replicates occurred in ", years_with_reps_above100, " and may deserve further examination to try to understand why these replicates are highly variable. For example, high levels of variation may not be considered problematic if analyte levels are extremely low. Additional context may help determine the appropriate response to this apparent imprecision.")
 }
 
 
-if(allSummary$rep_summary$variation_measure[1] == "Coefficient of Variation") {
+if(!is.null(allSummary$rep_summary$variation_measure[1]) && (allSummary$rep_summary$variation_measure[1] == "Coefficient of Variation")) {
   most_recent_example_id <- tail(allSummary$rep_proc[allSummary$rep_proc$n > 2, 'id'], 1)
   most_recent_example    <- which(paste0(rawData$OrganizationFormalName, "__", rawData$OrganizationIdentifier, '__', rawData$MonitoringLocationIdentifier, "__", rawData$CharacteristicName, "__", rawData$ActivityDepthHeightMeasure.MeasureValue, "__",rawData$ActivityStartDate) %in% most_recent_example_id) # identify rows in the input data that provide an example of multiple ambigous reps.
   # paste0(tmpDat$OrganizationFormalName,"__", tmpDat$OrganizationIdentifier, '__', tmpDat$MonitoringLocationIdentifier, "__", tmpDat$CharacteristicName, "__", tmpDat$ActivityDepthHeightMeasure.MeasureValue, "__",tmpDat$ActivityStartDate)
