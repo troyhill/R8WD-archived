@@ -2,6 +2,7 @@
 #'
 #' @param .data full WQP data frame with site location data
 #' @param type type of map to generate (i.e. simple map or circle marker map)
+#' @param cluster indicates whether or not to cluster nearby icons for cleaner viewing
 #' @param parameter optional input if user wants to map mean values for a parameter (by default plots all available parameters)
 #' @param parameterColumn name of the column with parameter names (not likely to require adjustment)
 #' @param digits digits used for displaying rounded data 
@@ -21,20 +22,22 @@
 #'
 #' @export
 
-create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColumn = 'CharacteristicName', digits = 3){
+create_map_alt <- function(.data, type = "circle", cluster = FALSE,
+                           parameter = NA, parameterColumn = 'CharacteristicName', 
+                           digits = 3){
   suppressWarnings({
-
+    
     # for circle marker map
     # taken from this stackoverflow: https://stackoverflow.com/questions/58505589/circles-in-legend-for-leaflet-map-with-addcirclemarkers-in-r-without-shiny
     addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5){
       colorAdditions <- paste0(colors, "; border-radius: 50%; width:", sizes, "px; height:", sizes, "px")
       labelAdditions <- paste0("<div style='display: inline-block;height: ", sizes,
                                "px;margin-top: 4px;line-height: ", sizes, "px;'>", labels, "</div>")
-
+      
       return(leaflet::addLegend(map, colors = colorAdditions, labels = labelAdditions,
                                 opacity = opacity, title = "Measurements"))
     }
-
+    
     # create baseline summary data, filter to data with relevant parameter tested
     if (is.na(parameter)) {
       parameter = unique(.data[, parameterColumn])
@@ -53,7 +56,7 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
                        "Parameter_Count" = length(unique(CharacteristicName)),
                        "Label_Type" = MapSamplingLocLabel)
     
-
+    
     map <- leaflet::leaflet()%>%
       leaflet::addProviderTiles("Esri.WorldTopoMap", group = "World topo",
                                 options = leaflet::providerTileOptions(updateWhenZooming = FALSE,updateWhenIdle = TRUE)) %>%
@@ -62,7 +65,7 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
       # fit boundaries of the map to a relevant window
       leaflet::fitBounds(lng1 = min(sumdat$LongitudeMeasure), lat1 = min(sumdat$LatitudeMeasure),
                          lng2 = max(sumdat$LongitudeMeasure), lat2 = max(sumdat$LatitudeMeasure))
-
+    
     # add custom markers for a simple map
     if (type == "simple") {
       locationTypeIcons <- leaflet::iconList(
@@ -107,10 +110,12 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
       
       map <- map %>%
         leaflet::clearShapes() %>%
-        leaflet::addMarkers(data = sumdat, lat = as.numeric(sumdat$LatitudeMeasure), lng = as.numeric(sumdat$LongitudeMeasure),
-                            icon =~ locationTypeIcons[Label_Type], popup = data_callout_text)
-    
-    # add circle markers to the map
+        {ifelse(cluster == TRUE, leaflet::addMarkers(., data = sumdat, lat = as.numeric(sumdat$LatitudeMeasure), lng = as.numeric(sumdat$LongitudeMeasure),
+                                                    icon =~ locationTypeIcons[Label_Type], popup = data_callout_text),
+               leaflet::addMarkers(., data = sumdat, lat = as.numeric(sumdat$LatitudeMeasure), lng = as.numeric(sumdat$LongitudeMeasure),
+                                   icon =~ locationTypeIcons[Label_Type], popup = data_callout_text))}
+      
+      # add circle markers to the map
     } else if (type == "circle") {
       # for circle marker map
       sumdat$radius <- 3
@@ -129,7 +134,7 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
       pal <- leaflet::colorBin(
         palette = "Blues",
         domain = sumdat$Parameter_Count)
-
+      
       map <- map %>%
         leaflet::addCircleMarkers(data = sumdat, lng =~ as.numeric(LongitudeMeasure), lat =~ as.numeric(LatitudeMeasure),
                                   color="black",fillColor =~ pal(Parameter_Count), fillOpacity = 0.7,
@@ -144,8 +149,36 @@ create_map_alt <- function(.data, type = "circle", parameter = NA, parameterColu
         addLegendCustom(colors = "black",
                         labels = site_legend$Sample_n, sizes = site_legend$Point_size*2)
     }
+    else if (type == "basic circle") {
+      plotdat <- .data[grepl(x = .data[, parameterColumn], pattern = parameter), ] %>%
+        dplyr::filter(!(is.na(HUCEightDigitCode))) %>%
+        dplyr::group_by(MonitoringLocationIdentifier, MonitoringLocationName, LatitudeMeasure, LongitudeMeasure) %>%
+        dplyr::summarise("median" = median(ResultMeasureValue, na.rm = TRUE),
+                         "interquartile range"    = IQR(ResultMeasureValue, na.rm = TRUE),
+                         "mean"   = mean(ResultMeasureValue, na.rm = TRUE),
+                         "sd"     = sd(ResultMeasureValue, na.rm = TRUE),
+                         "n"      = sum(!is.na(ResultMeasureValue))
+        )
+      pal <- leaflet::colorBin(
+        palette = "Blues",
+        domain = plotdat$median)
+      
+      
+      map <- map %>%
+        leaflet::addCircleMarkers(data = plotdat, lng =~ as.numeric(LongitudeMeasure), lat =~ as.numeric(LatitudeMeasure),
+                                  color="black",
+                                  fillColor =~ pal(plotdat$median),
+                                  fillOpacity = 0.7,
+                                  stroke = TRUE, weight = 1.5,
+                                  # fill   = plotdat$median,
+                                  popup  = paste0("Site ID: ", plotdat$MonitoringLocationIdentifier,
+                                                  "<br> Site Name: ", plotdat$MonitoringLocationName,
+                                                  "<br> Measurement Count: ", plotdat$n,
+                                                  "<br> Median (IQR): ", paste0(round(plotdat$median, digits), "\u00B1", round(plotdat$`interquartile range`, digits)),
+                                                  "<br> Mean (SD): ", paste0(round(plotdat$mean, digits), "\u00B1", round(plotdat$sd, digits))))
+    }
     else {
-      stop(type, " is not one of the available map types. Try either 'circle' or 'simple'.", collapse = ", ")
+      stop(type, " is not one of the available map types. Try either 'circle', 'basic circle', or simple'.", collapse = ", ")
     }
     return(map)
   })
