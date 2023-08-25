@@ -48,6 +48,16 @@ create_map <- function(.data, type = "basic circle", cluster = FALSE,
       stop(parameter, ' not found in data. Try one of these: ', paste0(unique(.data[, parameterColumn]), collapse = ', '))
     }
     removed.sd <- dplyr::filter(.data, is.na(HUCEightDigitCode), !(CharacteristicName %in% parameter))
+    
+    # create new data column for standardized monitoring location type labels
+    .data$MapSamplingLocLabel = .data$MonitoringLocationTypeName
+    ml_sites = unique(.data$MonitoringLocationTypeName)
+    for (i in 1 : length(unique(ml_sites))) {
+      new_label = R8WD::monitoring_location_types$Label[which(R8WD::monitoring_location_types$Name == ml_sites[i])]
+      
+      .data$map_sampling_loc_label = gsub(pattern = ml_sites[i], replacement = new_label, .data$MapSamplingLocLabel)
+    }
+    
     sumdat <- .data %>%
       dplyr::filter(!(is.na(HUCEightDigitCode)), (CharacteristicName %in% parameter)) %>%
       dplyr::group_by(MonitoringLocationIdentifier, MonitoringLocationName, LatitudeMeasure, LongitudeMeasure) %>%
@@ -98,15 +108,6 @@ create_map <- function(.data, type = "basic circle", cluster = FALSE,
                                   "<br> Site Name: ", sumdat$MonitoringLocationName,
                                   "<br> Measurement Count: ", sumdat$Sample_Count, # why use AvtivityIdentifier?
                                   "<br> Visit Count: ", sumdat$Visit_Count)
-      
-      # create new data column for standardized monitoring location type labels
-      .data$MapSamplingLocLabel = .data$MonitoringLocationTypeName
-      ml_sites = unique(.data$MonitoringLocationTypeName)
-      for (i in 1 : length(unique(ml_sites))) {
-        new_label = R8WD::monitoring_location_types$Label[which(R8WD::monitoring_location_types$Name == ml_sites[i])]
-        
-        .data$map_sampling_loc_label = gsub(pattern = ml_sites[i], replacement = new_label, .data$MapSamplingLocLabel)
-      }
       
       map <- map %>%
         leaflet::clearShapes() %>%
