@@ -4,10 +4,27 @@
 \alias{create_map}
 \title{Create Summary Map of Sampling Locations}
 \usage{
-create_map(.data)
+create_map(
+  .data,
+  type = "basic circle",
+  cluster = FALSE,
+  parameter = NA,
+  parameterColumn = "CharacteristicName",
+  digits = 3
+)
 }
 \arguments{
 \item{.data}{full WQP data frame with site location data}
+
+\item{type}{type of map to generate (i.e. simple map or circle marker map)}
+
+\item{cluster}{indicates whether or not to cluster nearby icons for cleaner viewing}
+
+\item{parameter}{optional input if user wants to map mean values for a parameter (by default plots all available parameters)}
+
+\item{parameterColumn}{name of the column with parameter names (not likely to require adjustment)}
+
+\item{digits}{digits used for displaying rounded data}
 }
 \value{
 an interactive map of sample locations displayed as a Leaflet plot
