@@ -4,17 +4,24 @@
 \alias{qc_pa}
 \title{Quality control screening of Purple Air data}
 \usage{
-qc_pa(dat = dat, sensor_agreement = 0.7, column_name = "pm2.5_atm_")
+qc_pa(
+  dat,
+  sensor_agreement_pct = 0.8,
+  sensor_agreement_ug = 5,
+  column_name = "pm2.5_atm_"
+)
 }
 \arguments{
 \item{dat}{dataset obtained with `get_pa()`}
 
-\item{sensor_agreement}{required level of sensor agreement, expressed as percent difference from the lower of the two sensors.}
+\item{sensor_agreement_pct}{required level of sensor agreement, expressed as percent difference from the lower of the two sensors.}
+
+\item{sensor_agreement_ug}{required level of sensor agreement, expressed in absolute terms}
 
 \item{column_name}{name of the column with data of interest.}
 }
 \value{
-dataframe
+dataframe with a data-flag column (e.g., 'pm2.5_atm_flag') and a column (e.g., 'pm2.5_atm_qc') that only includes data meeting the sensor agreement threshold.
 }
 \description{
 Quality control screening of Purple Air data

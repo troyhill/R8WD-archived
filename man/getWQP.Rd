@@ -6,7 +6,7 @@
 \usage{
 getWQP(
   organization,
-  characteristicName,
+  characteristicName = params$params[1:11],
   startDate = "01-01-2015",
   endDate = "12-31-2022",
   multiplier = 0.5
