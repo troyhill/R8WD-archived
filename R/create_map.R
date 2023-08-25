@@ -6,6 +6,7 @@
 #' @param parameter optional input if user wants to map mean values for a parameter (by default plots all available parameters)
 #' @param parameterColumn name of the column with parameter names (not likely to require adjustment)
 #' @param digits digits used for displaying rounded data 
+#' @param radius_arg radius of points used in 'basic circle' plot type
 #'
 #' @return an interactive map of sample locations displayed as a Leaflet plot
 #'
@@ -23,8 +24,9 @@
 #' @export
 
 create_map <- function(.data, type = "basic circle", cluster = FALSE,
-                           parameter = NA, parameterColumn = 'CharacteristicName', 
-                           digits = 3){
+                           parameter = NA, parameterColumn = 'CharacteristicName',
+                           digits = 3,
+                      radius_arg = 3){
   suppressWarnings({
     
     # for circle marker map
@@ -169,6 +171,7 @@ create_map <- function(.data, type = "basic circle", cluster = FALSE,
         leaflet::addCircleMarkers(data = plotdat, lng =~ as.numeric(LongitudeMeasure), lat =~ as.numeric(LatitudeMeasure),
                                   color="black",
                                   fillColor =~ pal(plotdat$median),
+                                  radius = radius_arg,
                                   fillOpacity = 0.7,
                                   stroke = TRUE, weight = 1.5,
                                   # fill   = plotdat$median,
