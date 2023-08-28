@@ -57,6 +57,17 @@ tribe_name <- gsub(x = allSummary$data$OrganizationFormalName[1], pattern = ' \\
 
 ### identify parameters collected on sondes (no expectation of blank QC data)
 sonde_parameters <- c('DO', 'pH', 'Temperature', 'Turbidity', 'Specific conductivity', 'Conductivity', 'TDS')
+
+
+### detect if TN is a calculated value
+TN_calculated   <- FALSE
+# if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated'))) {
+if (any(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) %in% c('Calculated', "AWQMS-CALC TN"))) {
+  TN_calculated <- TRUE
+  sonde_parameters <- c(sonde_parameters, 'TN')
+}
+
+
 included_params <- sentencify(unique(tribeData2$CharacteristicName))
 
 params_not_found <- unique(params$new_param[params_to_use])[!(unique(params$new_param[params_to_use]) %in% unique(tribeData2$CharacteristicName))]
@@ -309,14 +320,6 @@ tmp <- table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc
 tmp_by_param <- data.frame(table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)], allSummary$blank_proc$CharacteristicName))
 
 
-### if TN is a calculated value, exclude it from total samples
-TN_calculated   <- FALSE
-# if (all((length(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier'])) == 1) & (unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) == 'Calculated'))) {
-if (any(unique(allSummary$data[allSummary$data$CharacteristicName == 'TN', 'ResultAnalyticalMethod.MethodIdentifier']) %in% c('Calculated', "AWQMS-CALC TN"))) {
-  TN_calculated <- TRUE
-  sonde_parameters <- c(sonde_parameters, 'TN')
-}
-
 
 number_of_lab_blanks <- ifelse(any(grepl(x = names(tmp), pattern = 'Lab')), sum(tmp[grepl(x = names(tmp), pattern = 'Lab')]), 0)
 number_of_field_blanks <- ifelse(any(!grepl(x = tmp_by_param$Var2, pattern =  paste0(sonde_parameters, collapse = '|'))), sum(tmp_by_param$Freq[!grepl(x = tmp_by_param$Var2, pattern = paste0(sonde_parameters, collapse = '|'))]), 0)
@@ -415,8 +418,10 @@ if (any(MDL_check$all_NAs)) {
   sonde_params_with_blanks_but_no_MDLs_message <- ' These possible sonde parameters did have corresponding MRLs, so they may have been correctly identified as blanks and not measured with sondes.'
 }
 
-if (length(sonde_params_with_blanks) > 0) {
+if (length(blank_sonde_params) > 0) {
   sonde_param_statement    <- paste0("The presence of reported blanks (n = ", number_of_sonde_blanks, ") for ", sonde_params_with_blanks, " was noted because those data are likely to have been collected with sondes. ", sonde_params_with_blanks_but_no_MDLs_message)
+} else {
+  sonde_param_statement <- ""
 }
 
 overall_fieldBlank_rate  <- round(number_of_field_blanks / no_samples*100, 1)
@@ -507,7 +512,7 @@ if (length(params_lacking_blanks) > 0) {
      sentencify(params_lacking_blanks),
                                               " lacked field blank data in years when routine data were reported. Blanks should be collected at least once per 10 samples for every parameter or as described in the project's QAPP. Documenting blank collection rates in project progress reports is recommended as a way to track and improve blank coverage.")
 } else {
-  blank_collection_consistency_time <- paste0("**Field blank coverage:** Field blank data were collected very consistently, including some blank data for every parameter in every year. This consistent collection is commendable and demonstrates the project staff's strong commitment to quality control.")
+  blank_collection_consistency_time <- paste0("**Field blank coverage:** Field blank data were collected very consistently, including some blank data for every parameter in every year with routine data collection. This consistent collection is commendable and demonstrates the project staff's strong commitment to quality control.")
 }
 
 # if ((length(parameters_without_blanks) == 0)) {
@@ -533,7 +538,7 @@ rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_
 
 ### data entry issues
 ### lack of MDLs, sonde data mislabeled as blanks
-if (length(sonde_params_with_blanks) > 0) {
+if (length(blank_sonde_params) > 0) {
   sonde_blank_issues    <- paste0("- **Data review suggestion:** The presence of ", sonde_params_with_blanks, " data labeled as blanks deserves review to determine whether these are actually routine samples. ", 
                                   ifelse(any(MDL_check$all_NAs), " The absence of reporting limits in metadata for these samples is supportive of possible mis-characterization. ", "")
                                   , " Project staff are encouraged to review these data to evaluate whether they should be labeled as blanks.")
@@ -874,7 +879,7 @@ rec_list$rep_issues     <- paste0('**Field replicate performance:** Overall, ', 
 ### note data with exceptionally high variation (>=100%) between reps. Folks can ignore this if they feel it's relevant far in the past
 
 if (exists('reps_above100') && (reps_above100 > 0)) {
-  rec_list$rep_issues     <- paste0(rec_list$rep_issues, "\n\n", "- **Data review suggestion:** The dataset includes ", reps_above100," replicate sets with exceptionally high levels of variation (over 100%). Highly variable replicates occurred in ", years_with_reps_above100, " and may deserve further examination to try to understand why these replicates are highly variable. For example, high levels of variation may not be considered problematic if analyte levels are extremely low. Additional context may help determine the appropriate response to this apparent imprecision.")
+  rec_list$rep_issues     <- paste0(rec_list$rep_issues, "\n\n", "- **Data review suggestion:** The dataset includes ", reps_above100," replicate sets with exceptionally high (>100%) levels of variation. Highly variable replicates occurred in ", years_with_reps_above100, " and may deserve further examination to try to understand why these replicates are highly variable. For example, high levels of variation could be an effect of very low analyte levels and therefore may not be considered problematic. Additional context may help determine the appropriate response to this apparent imprecision.")
 }
 
 
@@ -1039,3 +1044,4 @@ downloadthis::download_file(path = rep_file,
 In preparing data for analysis, values below reporting limits were treated numerically as half of the reporting limit (e.g., a value reported as \'<1 mg`r "\U22C5"`L^-1^\' would be treated as \'0.5 mg`r "\U22C5"`L^-1^\'). Estimated values above a maximum value were treated as equivalent to the maximum known value (e.g., a value reported as \'>250 mg`r "\U22C5"`L^-1^\' would be treated as \'250 mg`r "\U22C5"`L^-1^\'). Data users should consult the raw data available from WQP to determine if any of these issues apply in the data described in this report. Future data users are encouraged to address estimated values and non-detects in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). 
 
 Several other adjustments and assumptions were made prior to analysis. All pH data were converted from log-scale pH values to molar H^+^ concentrations ($[H^{+}] = 10^{-pH}$) before any analyses were performed, and then converted back ($pH = -log_{10}[H^{+}]$) to unitless pH values for visualization and reporting. The WQP characteristics 'Ammonia', 'Ammonia and ammonium', and 'Ammonia-nitrogen' were treated as interchangeably representing NH~3~-N levels. Similarly, WQP data for the characteristics 'Temperature' and 'Temperature, water' were treated as interchangeable measures of water temperature (air temperatures were assumed to be input as 'Temperature, air'). The WQP characteristics 'Nitrate' and 'Nitrate + Nitrite' were treated as distinct quantities for this report. The WQP characteristics used for total nitrogen (TN) and total phosphorus (TP) were 'Total Nitrogen, mixed forms' and 'Total Phosphorus, mixed forms,' respectively.
+
