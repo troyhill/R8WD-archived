@@ -170,7 +170,8 @@ year_range <- paste0(substr(head(allSummary$data$ActivityStartDate, 1), 1, 4),  
 
 #### Draft report generated on `r format(Sys.Date(), '%d %B %Y')` for internal use only
 
-::: {layout="[[15,-25, 15],]"}
+
+::: {layout="[[15,-25, 15],]" .content-hidden when-format="docx"}
 ![](`r img_path_epa`){width="100" fig-align="left"}
 
 :::
