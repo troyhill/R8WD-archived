@@ -252,7 +252,7 @@ create_qc_visuals <- function(dataset,
                                  limits = levels(field_rep_plot_data$`Performance target met?`)) +
       ggplot2::theme_bw() + ggplot2::facet_wrap(. ~ CharacteristicName, scales = 'free_y') +
       ggplot2::theme_bw() + ggplot2::theme(plot.margin = ggplot2::margin(r = 40, unit = "pt")) +
-      ggplot2::geom_hline(yintercept = replicate_variation_threshold, linetype = 3) +
+      ggplot2::geom_hline(yintercept = replicate_variation_threshold, linetype = 2) +
       ggplot2::labs(y =  paste0(dataset$rep_summary$variation_measure[1], ' (field replicates)'), x = '') +
       ggplot2::theme(legend.position='bottom') +
       ggplot2::scale_x_datetime(breaks = "2 years", date_labels = "%Y")
