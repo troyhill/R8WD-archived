@@ -10,6 +10,7 @@
 #' @param prompt_user if TRUE, user is prompted to use one of the organization codes in the `tribes` object provided with `R8WD`.
 #' @param output either 'docx' or 'html'
 #' @param output_directory directory where output will be located. If the directory doesn't exist it will be created.
+#' @param draft_report TRUE or FALSE
 #'
 #' @return Quarto markdown document
 #' @export
@@ -24,7 +25,8 @@ create_report <- function(org = 'TURTLEMT',
                           extFile = 'script_generateReport.qmd',
                           prompt_user = TRUE,
                           output = 'html',
-                          output_directory = file.path(getwd(), 'R8WD_output') ) {
+                          output_directory = file.path(getwd(), 'R8WD_output'),
+                          draft_report = TRUE) {
 
   ### format output
   if(!grepl(x = tolower(output[1]), pattern = '^docx$|^html$')) {
@@ -59,7 +61,11 @@ create_report <- function(org = 'TURTLEMT',
 
   ### add dates
   newText    <- gsub(x = newText, pattern = 'REPLACE_START_DATE', replacement = startDate)
-  newText    <- gsub(x = newText, pattern = 'REPLACE_END_DATE', replacement = endDate)
+  newText    <- gsub(x = newText, pattern = 'REPLACE_END_DATE',   replacement = endDate)
+
+  ### add report type
+  newText    <- gsub(x = newText, pattern = 'REPLACE_REPORT_TYPE', replacement = draft_report)
+
 
   ### add params
   # parameters
