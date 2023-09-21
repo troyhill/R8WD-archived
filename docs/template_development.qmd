@@ -30,11 +30,15 @@ library(dataRetrieval)
 # library(htmlwidgets)
 library(R8WD)
 
-Tribal_org    <- c('BLCKFEET')  # c("WYDEQ_WQX", "WYDEQ_WATERSHED")
+Tribal_org    <- c('CSKTRIBE')  # c("WYDEQ_WQX", "WYDEQ_WATERSHED")
 start_date    <- '01-01-2015'
 end_date      <- '12-31-2022'
 params_to_use <- 1:11 # c(1:length(params$params))
 field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 2 and 3.
+draft_report  <- TRUE
+target_collection_rate        <- 10
+replicate_variation_threshold <- 20
+replicate_variation_tolerance <- 30
 ```
 
 ```{r}
@@ -43,6 +47,11 @@ field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 2 and 3
 #| include: false
 
 plot_summary_period <- 'month'
+if (draft_report) {
+  report_type <- paste0("Draft report generated on ", format(Sys.Date(), '%d %B %Y'), " for internal use only")
+} else {
+  report_type <- paste0("Report generated on ", format(Sys.Date(), '%d %B %Y'))
+}
 
 tribeData2 <- getWQP(
        organization       = Tribal_org,
@@ -170,7 +179,7 @@ if (includes_covid) {
 
 ### create coarse summary table
 ### observations by parameter
-summary_object <- create_qc_visuals(dataset = allSummary, form = 'coarse')
+summary_object <- create_qc_visuals(dataset = allSummary, form = 'coarse', field_only = field_only)
 table1 <- summary_object$table 
 
 total_obs <- sum(table1[, 2], na.rm = TRUE)
@@ -181,9 +190,9 @@ year_range <- paste0(substr(head(allSummary$data$ActivityStartDate, 1), 1, 4),  
 
 ## Quality Control Data Assessment Report for the `r tribe_name` CWA106 Program (`r year_range`)
 
-#### Draft report generated on `r format(Sys.Date(), '%d %B %Y')` for internal use only
+#### `r report_type` 
 
-::: {layout="[[15,-25, 15],]"}
+::: {layout="[[15,-25, 15],]"  .content-hidden when-format="docx"}
 ![](`r img_path_epa`){width="100" fig-align="left"}
 
 :::
@@ -240,7 +249,7 @@ The 'Supporting Data' section near the end of this report includes the data file
 <!--   webshot2::webshot(mapfile, file = mapfile_png, cliprect="viewport") -->
 <!-- # } -->
 <!-- ``` -->
-:::
+<!-- ::: -->
 
 
 ::: {.content-hidden when-format="docx"}
@@ -250,7 +259,7 @@ create_map(tribeData2)
 # create_map_alt(tribeData2, parameter = NA)
 ```
 :::
-Figure 1. Map of sampling locations included in this report.
+Figure 1. Map of sampling locations included in this report. Boundaries and feature names are shown for informational purposes and may not be accurate.
 
 
 <!-- The data described in this report draw from `r nrow(table1)` parameters, `r total_obs` observations.  -->
@@ -294,13 +303,13 @@ The summary information presented below is intended to provide general insights 
 #| message: false
 #| warning: false
 
-blank_object <- create_qc_visuals(dataset = allSummary, 
-                               form = 'blank', 
+blank_object <- create_qc_visuals(dataset    = allSummary, 
+                               form          = 'blank', 
+                               field_only    = field_only,
                                summaryPeriod = plot_summary_period,
-                               collection_rate_target = 10,
-                             parameters_wo_blanks = sonde_parameters,
-                             field_only = TRUE 
-                             )
+                               collection_rate_target = target_collection_rate,
+                               parameters_wo_blanks   = sonde_parameters
+                               )
 blank_table <- blank_object$table
 
 ```
@@ -311,12 +320,11 @@ blank_table <- blank_object$table
 #| warning: false
 
 if (nrow(allSummary$blank_proc) == 0) {
- blank_plot <- ggplot()
+ blank_plot <- ggplot() + ggplot2::ggtitle('No blanks reported in WQP')
+ blank_perf  <- NULL
 } else {
-# allSummary$blank_proc$date <- as.POSIXct(allSummary$blank_proc$ActivityStartDate, format = '%Y-%m-%d')
-blank_perf  <- allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ]
-
 blank_plot  <- blank_object$performance_plot
+blank_perf  <- allSummary$blank_proc[grepl(x = tolower(allSummary$blank_proc$ActivityTypeCode), pattern = 'field blank'), ]
 }
 
 
@@ -330,7 +338,7 @@ blank_plot  <- blank_object$performance_plot
 #| message: false
 #| include: false
 tmp <- table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)])
-tmp_by_param <- data.frame(table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)], allSummary$blank_proc$CharacteristicName))
+tmp_by_param <- data.frame(table(allSummary$blank_proc$ActivityTypeCode[!is.na(allSummary$blank_proc$ResultMeasureValue)], allSummary$blank_proc$CharacteristicName[!is.na(allSummary$blank_proc$ResultMeasureValue)]))
 
 
 
@@ -454,7 +462,7 @@ expected_blank_params <- sentencify(unique(allSummary$data$CharacteristicName)[!
 
 This report focuses on field blank data for analytes measured in laboratories. For the current dataset this includes `r expected_blank_params`. This report does not expect that field blanks are reported for samples measured using sondes and other in-situ probes, though there may be instrumentation for which field blanks are relevant and should be reported.
 
-For the parameters noted above, the `r tribe_name` CWA106 project collected `r number_of_field_blanks` field blanks during the period of interest for this report (`r overall_fieldBlank_rate`% overall collection rate). Of those field blanks, `r number_field_blank_detects` (`r percent_field_blank_detects`%) had detectable analyte levels (shown as red points in Fig. 3). For the entire `r year_range` period, aggregate rates of blank collection and blank performance are shown for each parameter in Table 2.
+For the parameters noted above, the `r tribe_name` CWA106 project collected `r number_of_field_blanks` field blanks during the period of interest for this report (`r overall_fieldBlank_rate`% overall collection rate). `r ifelse(!is.na(number_field_blank_detects), paste0('Of those field blanks, ', number_field_blank_detects, ' (', percent_field_blank_detects, '%) had detectable analyte levels (shown as red points in Fig. 3).'), '') `For the entire `r year_range` period, aggregate rates of blank collection and blank performance are shown for each parameter in Table 2.
 
 `r parameter_blank_message`
 
@@ -538,16 +546,18 @@ if (length(params_lacking_blanks) > 0) {
 if(is.na(percent_field_blank_detects)) {
   blank_issues <- 'The absence of field blank data for core CWA106 parameters makes it impossible to evaluate contamination issues.'
 } else if(percent_field_blank_detects <= 10) {
-  blank_issues <- 'This is encouraging and indicates consistent attention to detail during sample collection and handling.'
+  blank_issues <- paste0('Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. This is encouraging and indicates consistent attention to detail during sample collection and handling.')
 } else {
-  blank_issues <- 'This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the blank collection rate and re-training staff are among the possible ways to reduce contamination during sample collection and handling.'
+  blank_issues <- paste0('Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the blank collection rate and re-training staff are among the possible ways to reduce contamination during sample collection and handling.')
 }
 
 # ### simplify message if there's no blank data
 # if (number_of_field_blanks == 0) {
 
 rec_list$blank_freq_time  <- blank_collection_consistency_time
-rec_list$blank_issues     <- paste0('**Blank performance:** Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. ' , blank_issues, ' See Table 2 and Figure 3 for parameter-specific performance and to identify specific areas for improvement.')
+rec_list$blank_issues     <- paste0('**Blank performance:** ', 
+                                    blank_issues, ' See Table 2 and Figure 3 for parameter-specific performance and to identify specific areas for improvement.')
+
 
 ### data entry issues
 ### lack of MDLs, sonde data mislabeled as blanks
@@ -626,7 +636,6 @@ Guidance on replication rates are typically to collect one field replicate for e
 #| echo: false
 #| warning: false
 #| message: false
-replicate_variation_tolerance <- 30
 tmpDat        <- allSummary$data
 tmpDat$year   <- as.numeric(substr(tmpDat$ActivityStartDate, 1, 4))
 # ### which of these year-parameter combos have reps collected?
@@ -645,26 +654,20 @@ reps_expected$`Collection rate target met?` <- ifelse(reps_expected$ratio < 10, 
 
 parameters_with_missing_reps <- unique(reps_expected$CharacteristicName[(reps_expected$number_of_reps == 0)])
 
-
-if (nrow(allSummary$rep_summary) > 1) {
 rep_object <- create_qc_visuals(dataset = allSummary, 
-                          form = 'rep', 
-                          summaryPeriod = plot_summary_period,
-                          collection_rate_target = 10,
-                          parameters_wo_blanks = sonde_parameters,
-                          field_only = TRUE, 
-                          replicate_variation_threshold = 20,
+                          form          = 'rep', 
+                          summaryPeriod          = plot_summary_period,
+                          collection_rate_target = target_collection_rate,
+                          parameters_wo_blanks   = sonde_parameters,
+                          field_only             = field_only,
+                          replicate_variation_threshold = replicate_variation_threshold,
                           replicate_variation_tolerance = replicate_variation_tolerance)
-} else {
-  rep_object <- list(table = data.frame(Analyte = unique(reps_expected$CharacteristicName), 
-                                        n = 0), 
-                     collection_rate_plot = ggplot() + ggplot2::ggtitle('No replicates reported in WQP'), 
-                     performance_plot = ggplot() + ggplot2::ggtitle('No replicates reported in WQP'))
-  names(rep_object$table)[2] <- 'Number of replicate sets'
+
+if (any(is.na(allSummary$rep_summary$n))) {
+  rep_object$performance_plot <- ggplot() + ggplot2::ggtitle('No replicates reported in WQP')
   parameters_with_missing_reps <- unique(allSummary$data$CharacteristicName)
 }
 
-rep_ratio_plot <- rep_object$collection_rate_plot
 ```
 
 
@@ -756,7 +759,7 @@ Figure 5 shows the variation in replicates over time for each parameter. Replica
 #| warning: false
 #| fig-width: 8
 #| fig-cap: Figure 4. Field replicate collection rates for each parameter. Point color indicates a comparison with this report's replicate collection rate target of 10% of relevant samples (dashed horizontal line). Periods with less than the target 10% collection rate are shown in red; periods satisfying the 10% target are shown in green. Note that y-axis range varies among facets.
-rep_ratio_plot
+rep_object$collection_rate_plot
 ```
 
 
@@ -765,48 +768,13 @@ rep_ratio_plot
 #| warning: false
 #| fig-width: 8
 #| fig-cap: Figure 5. Field replicate performance over time for each parameter. Dashed horizontal line depicts this report's target of 20% variation. Replicates with less than 20% variation satisfy this performance target and are shown as green points. Values that were more variable than this report's target are shown in red. Note that y-axis range varies among facets.
-if (!any(complete.cases(allSummary$rep_proc))) {
-  ggplot() + ggtitle('No replicates reported')
-} else {
-# allSummary$rep_proc$date <- as.POSIXct(sapply(X = strsplit(allSummary$rep_proc$id, '__'), FUN = '[[', 6), format = '%Y-%m-%d')
-# 
-# field_rep_plot_data <- allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ]
-# # field_rep_plot_data <- field_rep_plot_data[!is.na(field_rep_plot_data$RPD), ]
-# field_rep_plot_data$`Performance target met?` <- ifelse(field_rep_plot_data$RPD > 20, 'No', 'Yes')
-# field_rep_plot_data$`Performance target met?`[is.na(field_rep_plot_data$`Performance target met?`)] <- 'NA'
-# field_rep_plot_data$`Performance target met?` <- ordered(x = field_rep_plot_data$`Performance target met?`, levels = c('No', 'Yes', 'NA'))
-# 
-# reps_above100            <- nrow(field_rep_plot_data[field_rep_plot_data$RPD >= 100,])
-# years_with_reps_above100 <- sentencify(x = unique(field_rep_plot_data[field_rep_plot_data$RPD >= 100, 'year']))
-# 
-# ### issue: code doesn't interpret ResultDetectionConditionText == 'Present Above Quantification Limit' - these appear as NAs
-# ### for SRST: 
-# # tmp <- allSummary$rep_raw[grepl(x = allSummary$rep_raw$ActivityStartDate, pattern = '2016-08-11|2017-08-10'), ]
-# # tmp2 <- tmp[grepl(x = tmp$MonitoringLocationIdentifier, pattern = 'SRSTEPA-SW-GR-2016-03|SRSTEPA-SW-GR-460-01'), ]
-# # tmp2[tmp2$CharacteristicName %in% 'E_coli', ] # $ResultMeasureValue
-# 
-# # rep_plot1 <- ggplot(allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate'), ], aes(x = date, y = RPD)) +
-# #   geom_line(linetype = 2) + geom_point() + scale_y_continuous(labels = function(x) paste0(x, "%")) +
-# #   facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() +
-# #   geom_hline(yintercept = 20, linetype = 3) +
-# #   labs(y = paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') # '(\u00b11SD)'
-# rep_plot <- ggplot(field_rep_plot_data, aes(x = date, y = RPD)) +
-#   # geom_line(linetype = 2) + 
-#   geom_point(aes(fill = `Performance target met?`), pch = 21, size = 3) + scale_fill_manual(values = c("red", "green", 'gray')) +
-#   theme_bw() + facet_wrap(. ~ CharacteristicName, scales = 'free_y') + theme_bw() + theme(plot.margin = margin(r = 40, unit = "pt")) +
-#    geom_hline(yintercept = 20, linetype = 3) +
-#   labs(y =  paste0(allSummary$rep_summary$variation_measure[1], ' (field replicates)'), x = '') + theme(legend.position='bottom')+
-#    scale_x_datetime(breaks = "2 years", date_labels = "%Y")
-# 
-# rep_plot
+if (any(complete.cases(allSummary$rep_proc))) {
   reps_above_100_df        <- allSummary$rep_proc[grepl(x = allSummary$rep_proc$ActivityTypeCode, pattern = 'Field replicate') & (allSummary$rep_proc$RPD >= 100), ]
   reps_above100            <- nrow(reps_above_100_df)
   years_with_reps_above100 <- sentencify(x = unique(na.omit(reps_above_100_df$year)))
-
-  rep_object$performance_plot
-  
-  
 }
+rep_object$performance_plot
+  
 
 ```
 
@@ -877,19 +845,26 @@ if (length(parameters_with_zero_reps) > 0) {
 if(is.na(reps_pct_above20)) {
   rep_issues <- paste0('Replicates were not reported, and thus it is not possible to evaluate replicate performance or the quality of the ', tribe_name, ' data appearing in WQP.')
 } else if(reps_pct_above20 <= 10) {
-  rep_issues <- 'This is encouraging and suggests consistency and attention to detail during sample collection and handling. See Table 3 and Figure 5 for parameter-specific performance and to identify specific areas for improvement.'
+  rep_issues <- paste0('Overall, ', reps_pct_above20, '% of replicates exceeded the 20% target used in this report. This is encouraging and suggests consistency and attention to detail during sample collection and handling. See Table 3 and Figure 5 for parameter-specific performance and to identify specific areas for improvement.')
 } else {
-  rep_issues <- 'This level of imprecision suggests there may be opportunities to improve consistency during sample collection and handling. Increasing the rate of replicate collection is recommended to help identify the underlying issues. See Table 3 and Figure 5 for parameter-specific performance and to identify specific parameters to target for improvement.'
+  rep_issues <- paste0('Overall, ', reps_pct_above20, '% of replicates exceeded the 20% target used in this report. This level of imprecision suggests there may be opportunities to improve consistency during sample collection and handling. Increasing the rate of replicate collection is recommended to help identify the underlying issues. See Table 3 and Figure 5 for parameter-specific performance and to identify specific parameters to target for improvement.')
 }
 
 
 rec_list$rep_freq_time  <- rep_collection_consistency_time
 # rec_list$rep_freq_param <- rep_collection_consistency_param
-rec_list$rep_issues     <- paste0('**Field replicate performance:** Overall, ', reps_pct_above20, '% of replicates exceeded the 20% target used in this report. ' , rep_issues)
 
+# if(is.na(reps_pct_above20)) {
+#   rep_issues <- 'The absence of field blank data for core CWA106 parameters makes it impossible to evaluate contamination issues.'
+# } else if(reps_pct_above20 <= 10) {
+#   rep_issues <- paste0('Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. This is encouraging and indicates consistent attention to detail during sample collection and handling.')
+# } else {
+#   rep_issues <- paste0('Overall, ', percent_field_blank_detects, '% of blanks had evidence of contamination. This magnitude of contamination deserves further attention and effort to identify its causes. Increasing the blank collection rate and re-training staff are among the possible ways to reduce contamination during sample collection and handling.')
+# }
 
 ### General questions, possible data issues
 ### note data with exceptionally high variation (>=100%) between reps. Folks can ignore this if they feel it's relevant far in the past
+rec_list$rep_issues     <- paste0('**Field replicate performance:** ', rep_issues)
 
 if (exists('reps_above100') && (reps_above100 > 0)) {
   rec_list$rep_issues     <- paste0(rec_list$rep_issues, "\n\n", "- **Data review suggestion:** The dataset includes ", reps_above100," replicate sets with exceptionally high (>100%) levels of variation. Highly variable replicates occurred in ", years_with_reps_above100, " and may deserve further examination to try to understand why these replicates are highly variable. For example, high levels of variation could be an effect of very low analyte levels and therefore may not be considered problematic. Additional context may help determine the appropriate response to this apparent imprecision.")
@@ -906,7 +881,7 @@ if(!is.null(allSummary$rep_summary$variation_measure[1]) && (allSummary$rep_summ
   if (nchar(timestamp_note) > 1) {
     rep_data_review_message <-  paste0(rep_data_review_message, "The absence of time stamps for some samples complicated this report's effort to pair replicates with corresponding routine samples. It is recommended that these data be examined to ensure that time stamps are included with project metadata in the WQP.")
   }
- rep_data_review_message <-  paste0(rep_data_review_message, " Ambiguity in pairing of replicated data could benefit from review of these data to ensure that the WQP entries reflect the project's sampling. The most recent example of replicate ambiguity can be found between rows ", sentencify(c(most_recent_example[1]+1, tail(most_recent_example, 1)+1)), # adding one to incorporate headers, assuming the files are opened in excel.
+ rep_data_review_message <-  paste0(rep_data_review_message, " Ambiguity in pairing of replicated data could benefit from review of these data to ensure that the WQP entries reflect the project's sampling. For one example of replicate ambiguity, where more than two observations appear to be replicates, see data between rows ", sentencify(c(most_recent_example[1]+1, tail(most_recent_example, 1)+1)), # adding one to incorporate headers, assuming the files are opened in excel.
                                     " in the raw WQP data included below; other instances can be identified using the replicate dataset.")
  
  rec_list$rep_issues     <- paste0(rec_list$rep_issues, "\n\n", rep_data_review_message)
