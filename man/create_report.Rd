@@ -12,7 +12,8 @@ create_report(
   extFile = "script_generateReport.qmd",
   prompt_user = TRUE,
   output = "html",
-  output_directory = file.path(getwd(), "R8WD_output")
+  output_directory = file.path(getwd(), "R8WD_output"),
+  draft_report = TRUE
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ create_report(
 \item{output}{either 'docx' or 'html'}
 
 \item{output_directory}{directory where output will be located. If the directory doesn't exist it will be created.}
+
+\item{draft_report}{TRUE or FALSE}
 }
 \value{
 Quarto markdown document
