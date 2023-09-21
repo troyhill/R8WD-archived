@@ -1,11 +1,10 @@
 Package: R8WD
 Type: Package
-Title: Utility code for analysis of Tribal data from the EPA Water Quality Portal
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Title: Analysis and reporting on EPA Water Quality Portal data
+Version: 0.1.1
+Author: Troy D. Hill and Ethan Yu
+Maintainer: Troy D. Hill <Hill.TroyD@epa.gov>
+Description: Reporting and data visualization tools for Water Quality Portal data.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
