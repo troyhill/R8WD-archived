@@ -12,8 +12,7 @@ create_qc_visuals(
     "Specific conductivity", "Conductivity", "TDS"),
   field_only = TRUE,
   collection_rate_target = 10,
-  replicate_variation_threshold = 20,
-  replicate_variation_tolerance = 30
+  replicate_variation_threshold = 20
 )
 }
 \arguments{
@@ -30,8 +29,6 @@ create_qc_visuals(
 \item{collection_rate_target}{target collection rate for quality control measures (blanks and replicates)}
 
 \item{replicate_variation_threshold}{variation threshold used for evaluating replicate performance: what is the target level of precision?}
-
-\item{replicate_variation_tolerance}{the proportion of replicates exceeding `replicate_variation_threshold` that is considered problematic}
 }
 \value{
 a table for inclusion in markdown documents
