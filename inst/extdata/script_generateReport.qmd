@@ -478,7 +478,7 @@ blank_plot
 
 ```{r}
 #| echo: false
-#| fig-cap: Table 2. A summary of blank data for each analyte over the period of record covered by this report. Rightmost two columns assess whether the project's blank collection rates and blank performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 2. A summary of blank data for each analyte over the period of record covered by this report.
 
 gt::tab_options(gt::gt(blank_table), table.font.size = 11)
 ```
@@ -647,8 +647,7 @@ rep_object <- create_qc_visuals(dataset = allSummary,
                           collection_rate_target = target_collection_rate,
                           parameters_wo_blanks   = sonde_parameters,
                           field_only             = field_only,
-                          replicate_variation_threshold = replicate_variation_threshold,
-                          replicate_variation_tolerance = replicate_variation_tolerance)
+                          replicate_variation_threshold = replicate_variation_threshold)
 
 if (any(is.na(allSummary$rep_summary$n))) {
   rep_object$performance_plot <- ggplot() + ggplot2::ggtitle('No replicates reported in WQP')
@@ -771,7 +770,7 @@ rep_object$performance_plot
 #| echo: false
 #| warning: false
 #| label: Table3
-#| fig-cap: Table 3. Summary of replicate collection rates and performance over the period of record covered by this report. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 3. Summary of replicate collection rates and replicate performance during the period of record covered by this report.
 gt::tab_options(gt::gt(table2), table.font.size = 11)
 
 ```
@@ -1019,3 +1018,4 @@ downloadthis::download_file(path = rep_file,
 In preparing data for analysis, values below reporting limits were treated numerically as half of the reporting limit (e.g., a value reported as \'<1 mg`r "\U22C5"`L^-1^\' would be treated as \'0.5 mg`r "\U22C5"`L^-1^\'). Estimated values above a maximum value were treated as equivalent to the maximum known value (e.g., a value reported as \'>250 mg`r "\U22C5"`L^-1^\' would be treated as \'250 mg`r "\U22C5"`L^-1^\'). Data users should consult the raw data available from WQP to determine if any of these issues apply in the data described in this report. Future data users are encouraged to address estimated values and non-detects in ways that are appropriate for their motivating questions and in consultation with relevant literature (including EPA's [QA/G-9 Guidance For Data Quality Assessment](https://www.epa.gov/sites/default/files/2015-06/documents/g9-final.pdf){.external target="_blank"}). 
 
 Several other adjustments and assumptions were made prior to analysis. All pH data were converted from log-scale pH values to molar H^+^ concentrations ($[H^{+}] = 10^{-pH}$) before any analyses were performed, and then converted back ($pH = -log_{10}[H^{+}]$) to unitless pH values for visualization and reporting. The WQP characteristics 'Ammonia', 'Ammonia and ammonium', and 'Ammonia-nitrogen' were treated as interchangeably representing NH~3~-N levels. Similarly, WQP data for the characteristics 'Temperature' and 'Temperature, water' were treated as interchangeable measures of water temperature (air temperatures were assumed to be input as 'Temperature, air'). The WQP characteristics 'Nitrate' and 'Nitrate + Nitrite' were treated as distinct quantities for this report. The WQP characteristics used for total nitrogen (TN) and total phosphorus (TP) were 'Total Nitrogen, mixed forms' and 'Total Phosphorus, mixed forms,' respectively.
+
