@@ -10,7 +10,6 @@
 #' @param field_only  should blank table focus only on field blanks?
 #' @param collection_rate_target target collection rate for quality control measures (blanks and replicates)
 #' @param replicate_variation_threshold variation threshold used for evaluating replicate performance: what is the target level of precision?
-#' @param replicate_variation_tolerance the proportion of replicates exceeding `replicate_variation_threshold` that is considered problematic
 #'
 #' @return a table for inclusion in markdown documents
 #'
@@ -26,8 +25,7 @@ create_qc_visuals <- function(dataset,
                              parameters_wo_blanks = c('DO', 'pH', 'Temperature', 'Turbidity', 'Specific conductivity', 'Conductivity', 'TDS'),
                              field_only = TRUE,
                              collection_rate_target = 10,
-                             replicate_variation_threshold = 20,
-                             replicate_variation_tolerance = 30
+                             replicate_variation_threshold = 20
                              ) {
   ### create coarse summary table
   ### observations by parameter
@@ -163,7 +161,8 @@ create_qc_visuals <- function(dataset,
       blank_int$`Are <5% of blanks contaminated?`[is.nan(blank_int$pct_above_MDL)]  <- 'MRL not reported'
       blank_int$`Are <5% of blanks contaminated?`[blank_int$`Blanks (no.)` == 0]    <- 'Blanks not reported'
 
-      table1             <- blank_int[, c(1:5, 7, 9:11)]
+      # table1             <- blank_int[, c(1:5, 7, 9:11)]
+      table1             <- blank_int[, c(1:3, 9:10, 5, 7, 11)]
     }
 
 
@@ -253,16 +252,21 @@ create_qc_visuals <- function(dataset,
 
     above20_by_param <- plyr::ddply(rep_data, c('CharacteristicName', 'ActivityTypeCode'), plyr::summarize,
                                     `Number of replicate sets`       = sum(!is.na(RPD)),
-                                    `Sets with variation above 20%`  = sum(above_target, na.rm = TRUE),
-                                    `Proportion above 20%`           = paste0(round(100*(sum(above_target, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
+                                    `Replicate sets with >20% variation`  = paste0(sum(above_target, na.rm = TRUE), ' (', paste0(round(100*(sum(above_target, na.rm = TRUE) / sum(!is.na(RPD)))), '%'), ')')
+                                    # `Proportion above 20%`           = paste0(round(100*(sum(above_target, na.rm = TRUE) / sum(!is.na(RPD)))), '%')
     )
+    if (any(grepl(x = above20_by_param[, 4], pattern = ')'))) {
+      ### if there's a single actual value, add clarity to the first parenthetical percentage
+      above20_by_param[grepl(x = above20_by_param[, 4], pattern = ')'), 4][1] <- gsub(x = above20_by_param[grepl(x = above20_by_param[, 4], pattern = ')'), 4][1], pattern = ')', replacement = ' of reps)')
+    }
+
     if (nrow(above20_by_param) == 0) {
       ### this is annoying ddply behavior
       above20_by_param <- expand.grid(CharacteristicName = tot_samples$CharacteristicName,
                                       ActivityTypeCode   = ifelse(field_only, 'Field replicate',c('Field replicate', 'Lab duplicate')),
                                       `Number of replicate sets`       = 0,
-                                      `Sets with variation above 20%`  = NA,
-                                      `Proportion above 20%`           = NA
+                                      `Replicate sets with >20% variation`  = NA #,
+                                      # `Proportion above 20%`           = NA
                                       )
     }
     above20_by_param$`Sample Type` <- above20_by_param$ActivityTypeCode
@@ -296,22 +300,22 @@ create_qc_visuals <- function(dataset,
       above20_by_param$tot_samples               <- tot_samples$`Total observations`[match(above20_by_param$CharacteristicName, tot_samples$CharacteristicName)]
       above20_by_param$rep_freq                  <- above20_by_param$`Number of replicate sets`/ above20_by_param$tot_samples * 100
       above20_by_param$`Replicate collection rate (%)` <- paste0(round(above20_by_param$rep_freq, 1), '%')
-      above20_by_param$`Replicates >10% of samples?`        <- ifelse(above20_by_param$rep_freq >= 10, "\u2705", "\u274C")
-      above20_by_param[paste0('Are <',replicate_variation_tolerance, '% of replicates high-variation?')] <- ifelse(above20_by_param$`Proportion above 20%` <= replicate_variation_tolerance, "\u2705", "\u274C")
+      above20_by_param$`Are replicates >10% of samples?`        <- ifelse(above20_by_param$rep_freq >= 10, "\u2705", "\u274C")
+      # above20_by_param[paste0('Are <',replicate_variation_tolerance, '% of replicates high-variation?')] <- ifelse(above20_by_param$`Proportion above 20%` <= replicate_variation_tolerance, "\u2705", "\u274C")
     } else {
       above20_by_param$tot_samples                     <- NA
       above20_by_param$rep_freq                        <- NA
       above20_by_param$`Replicate Collection rate (%)` <- NA
       above20_by_param$`Are replicates >10% of samples?`        <- "\u274C"
-      above20_by_param[paste0('Are <',replicate_variation_tolerance, '% of replicates high-variation?')] <- "\u274C"
+      # above20_by_param[paste0('Are <',replicate_variation_tolerance, '% of replicates high-variation?')] <- "\u274C"
     }
-    above20_by_param[c(4, 8, 10)][above20_by_param$`Number of replicate sets` == 0,] <- 'Reps not reported'
+    above20_by_param[c(4, 8)][above20_by_param$`Number of replicate sets` == 0,] <- 'Reps not reported'
     names(above20_by_param)[grep(x = names(above20_by_param), pattern = 'CharacteristicName')] <- 'Analyte'
 
     ### sub out actual performance criterion in column headers
     names(above20_by_param)[4:5] <- gsub(x = names(above20_by_param)[4:5], pattern = '20', replacement = replicate_variation_threshold)
 
-    table1 <- above20_by_param[!is.na(above20_by_param$Analyte), c(1:4, 8, 5, 9, 10)] # c(1:3, 7, 4, 8:9)]
+    table1 <- above20_by_param[!is.na(above20_by_param$Analyte), c(1:3, 7:8, 4)]
 
 
     ### make rep performance plot
