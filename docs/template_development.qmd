@@ -38,7 +38,7 @@ field_only    <- TRUE # if FALSE, lab blanks/reps are included in tables 2 and 3
 draft_report  <- TRUE
 target_collection_rate        <- 10
 replicate_variation_threshold <- 20
-replicate_variation_tolerance <- 30
+
 ```
 
 ```{r}
@@ -491,7 +491,7 @@ blank_plot
 
 ```{r}
 #| echo: false
-#| fig-cap: Table 2. A summary of blank data for each analyte over the period of record covered by this report. Rightmost two columns assess whether the project's blank collection rates and blank performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 2. A summary of blank data for each analyte over the period of record covered by this report.
 
 gt::tab_options(gt::gt(blank_table), table.font.size = 11)
 ```
@@ -660,8 +660,7 @@ rep_object <- create_qc_visuals(dataset = allSummary,
                           collection_rate_target = target_collection_rate,
                           parameters_wo_blanks   = sonde_parameters,
                           field_only             = field_only,
-                          replicate_variation_threshold = replicate_variation_threshold,
-                          replicate_variation_tolerance = replicate_variation_tolerance)
+                          replicate_variation_threshold = replicate_variation_threshold)
 
 if (any(is.na(allSummary$rep_summary$n))) {
   rep_object$performance_plot <- ggplot() + ggplot2::ggtitle('No replicates reported in WQP')
@@ -784,7 +783,7 @@ rep_object$performance_plot
 #| echo: false
 #| warning: false
 #| label: Table3
-#| fig-cap: Table 3. Summary of replicate collection rates and performance over the period of record covered by this report. The rightmost two columns assess whether the project's collection rates and replicate performance meet target criteria (green checks) or not (red 'X' marks).
+#| fig-cap: Table 3. Summary of replicate collection rates and replicate performance during the period of record covered by this report.
 gt::tab_options(gt::gt(table2), table.font.size = 11)
 
 ```
