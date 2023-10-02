@@ -899,56 +899,93 @@ if(!is.null(allSummary$rep_summary$variation_measure[1]) && (allSummary$rep_summ
 
 The following files contain the data used in this report:
 
+
 ```{r}
 #| echo: false
 #| warning: false
 #| include: false
 appendToFileName <- paste0("_", allSummary$data$OrganizationIdentifier[1], "_", min(years_with_data, na.rm = TRUE), "_", max(years_with_data, na.rm = TRUE))
 
+embed_data <- function(x= mtcars, filename= "file.csv", label= "Get data", compress = FALSE){
+
+  if (!compress) {
+    write.csv(x, file = file.path(".", filename), row.names = FALSE)
+    enc <- sprintf('data:text/csv;base64,%s', openssl::base64_encode(paste0(readLines(file.path(".", filename)), collapse="\n")))
+    unlink(file.path(".", filename))
+    # String result ready to be placed in rmarkdown
+    link <- paste0("<a download='", filename, "' href=", enc, ">", label, "</a>")
+  } else {
+    write.csv(x, file = gzfile(file.path(".", paste0(filename, ".gz"))), row.names = FALSE)
+    
+  # String result ready to be placed in rmarkdown
+  link <- xfun::embed_file(file.path(".", paste0(filename, ".gz")), text = label)
+  unlink(file.path(".", paste0(filename, ".gz")))
+  }
+  return(link)
+}
+# embed_data <- function(x= mtcars, filename= "file.csv", label= "Get data", compress = FALSE){
+# 
+#   # Create encoded Base64 datastream 
+#   encode_data= function(x){
+#     if (compress) {
+#           write.csv(x, file = gzfile("./file.csv.gz"), row.names = FALSE)
+#     } else {
+#           write.csv(x, file = "./file.csv", row.names = FALSE)
+#     }
+#     enc= sprintf('data:text/csv;base64,%s', openssl::base64_encode(paste0(readLines("./file.csv"), collapse="\n")) )
+#     unlink("./file.csv")
+#     return(enc)
+#   }
+# 
+#   # String result ready to be placed in rmarkdown
+#   paste0("<a download='", filename, "' href=", encode_data(x), ">", label, "</a>")
+# 
+# }
+
 ```
 
-```{r}
-#| echo: false
-#| warning: false
-raw_data_file <- tempfile(fileext = '.csv')
-raw_data_summary_data <- write.csv(rawData, file = raw_data_file, row.names = FALSE)
-downloadthis::download_file(path = raw_data_file,
-  output_name  = paste0("WQP_data", appendToFileName),
-  button_label = "Download Water Quality Portal data",
-  button_type  = "default",
-  has_icon     = TRUE,
-  icon         = "fa fa-save"
-  )
-```
+<!-- # ```{r} -->
+<!-- # #| echo: false -->
+<!-- # #| warning: false -->
+<!-- # raw_data_file <- tempfile(fileext = '.csv') -->
+<!-- # raw_data_summary_data <- write.csv(rawData, file = raw_data_file, row.names = FALSE) -->
+<!-- # downloadthis::download_file(path = raw_data_file, -->
+<!-- #   output_name  = paste0("WQP_data", appendToFileName), -->
+<!-- #   button_label = "Download Water Quality Portal data", -->
+<!-- #   button_type  = "default", -->
+<!-- #   has_icon     = TRUE, -->
+<!-- #   icon         = "fa fa-save" -->
+<!-- #   ) -->
+<!-- # ``` -->
+<!-- #  -->
+<!-- # ```{r} -->
+<!-- # #| echo: false -->
+<!-- # #| warning: false -->
+<!-- # data_file <- tempfile(fileext = '.csv') -->
+<!-- # data_summary_data <- write.csv(allSummary$data, file = data_file, row.names = FALSE) -->
+<!-- # downloadthis::download_file(path = data_file, -->
+<!-- #   output_name  = paste0("Processed_data", appendToFileName), -->
+<!-- #   button_label = "Download post-QC data", -->
+<!-- #   button_type  = "default", -->
+<!-- #   has_icon     = TRUE, -->
+<!-- #   icon         = "fa fa-save" -->
+<!-- #   ) -->
+<!-- # ``` -->
 
-```{r}
-#| echo: false
-#| warning: false
-data_file <- tempfile(fileext = '.csv')
-data_summary_data <- write.csv(allSummary$data, file = data_file, row.names = FALSE)
-downloadthis::download_file(path = data_file,
-  output_name  = paste0("Processed_data", appendToFileName),
-  button_label = "Download post-QC data",
-  button_type  = "default",
-  has_icon     = TRUE,
-  icon         = "fa fa-save"
-  )
-```
-
-```{r}
-#| echo: false
-#| warning: false
-blank_file <- tempfile(fileext = '.csv')
-blank_data <- write.csv(allSummary$blank_proc, file = blank_file, row.names = FALSE)
-### can we avoid using downloadthis package?
-downloadthis::download_file(path = blank_file,
-  output_name  = paste0("Blank_data_raw", appendToFileName),
-  button_label = "Download blank data", 
-  button_type  = "default",
-  has_icon     = TRUE,
-  icon         = "fa fa-save"
-  )
-```
+<!-- # ```{r} -->
+<!-- # #| echo: false -->
+<!-- # #| warning: false -->
+<!-- # blank_file <- tempfile(fileext = '.csv') -->
+<!-- # blank_data <- write.csv(allSummary$blank_proc, file = blank_file, row.names = FALSE) -->
+<!-- # ### can we avoid using downloadthis package? -->
+<!-- # downloadthis::download_file(path = blank_file, -->
+<!-- #   output_name  = paste0("Blank_data_raw", appendToFileName), -->
+<!-- #   button_label = "Download blank data",  -->
+<!-- #   button_type  = "default", -->
+<!-- #   has_icon     = TRUE, -->
+<!-- #   icon         = "fa fa-save" -->
+<!-- #   ) -->
+<!-- # ``` -->
 
 \n 
 
@@ -966,20 +1003,34 @@ downloadthis::download_file(path = blank_file,
 <!--   ) -->
 <!-- ``` -->
 
-```{r}
-#| echo: false
-#| warning: false
-rep_file <- tempfile(fileext = '.csv')
-rep_data <- write.csv(allSummary$rep_raw, file = rep_file, row.names = FALSE)
-downloadthis::download_file(path = rep_file,
-  output_name  = paste0("Replicate_data_raw", appendToFileName),
-  button_label = "Download replicate data",
-  button_type  = "default",
-  has_icon     = TRUE,
-  icon         = "fa fa-save"
-  )
-```
+<!-- # ```{r} -->
+<!-- # #| echo: false -->
+<!-- # #| warning: false -->
+<!-- # rep_file <- paste0("Replicate_data_raw", appendToFileName, ".csv") # tempfile(fileext = '.csv') -->
+<!-- # rep_data <- write.csv(allSummary$rep_raw, file = rep_file, row.names = FALSE) -->
+<!-- # downloadthis::download_file(path = rep_file, -->
+<!-- #   output_name  = paste0("Replicate_data_raw", appendToFileName), -->
+<!-- #   button_label = "Download replicate data", -->
+<!-- #   button_type  = "default", -->
+<!-- #   has_icon     = TRUE, -->
+<!-- #   icon         = "fa fa-save" -->
+<!-- #   ) -->
+<!-- # ``` -->
     
+
+
+- `r embed_data(rawData, filename= paste0("WQP_data", appendToFileName, ".csv"), label = 'Download Water Quality Portal data', compress = TRUE)`
+
+
+<!-- - `r embed_data(allSummary$data, filename= paste0("Processed_data", appendToFileName, ".csv"), label = 'Download post-QC data')` -->
+
+
+- `r embed_data(allSummary$blank_proc, filename= paste0("Blank_data_raw", appendToFileName, ".csv"), label = 'Download blank data')`
+
+
+- `r embed_data(allSummary$rep_raw, filename= paste0("Replicate_data_raw", appendToFileName, ".csv"), label = 'Download replicate data')`
+
+
 
 <!-- ```{r} -->
 <!-- #| echo: false -->
