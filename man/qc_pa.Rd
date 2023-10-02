@@ -8,7 +8,8 @@ qc_pa(
   dat,
   sensor_agreement_pct = 0.8,
   sensor_agreement_ug = 5,
-  column_name = "pm2.5_atm_"
+  column_name = "pm2.5_atm_",
+  sensor_name = "sensor_index"
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ qc_pa(
 \item{sensor_agreement_ug}{required level of sensor agreement, expressed in absolute terms}
 
 \item{column_name}{name of the column with data of interest.}
+
+\item{sensor_name}{name of column with sensor IDs}
 }
 \value{
 dataframe with a data-flag column (e.g., 'pm2.5_atm_flag') and a column (e.g., 'pm2.5_atm_qc') that only includes data meeting the sensor agreement threshold.
