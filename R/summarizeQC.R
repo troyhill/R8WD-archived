@@ -174,7 +174,7 @@ summarizeQC <- function(data) {
     ### rename and join data
     newDat        <- as.data.frame(do.call('rbind', strsplit(as.character(reps_all$id),'__',fixed=TRUE)))
     names(newDat) <- c('OrganizationFormalName', 'OrganizationIdentifier', 'MonitoringLocationIdentifier', 'CharacteristicName', 'ActivityDepthHeightMeasure.MeasureValue', 'ActivityStartDate')
-    newDat$ResultValueMeasure <- reps_all$aver
+    newDat$ResultMeasureValue <- reps_all$aver
     newDat$DetectionQuantitationLimitMeasure.MeasureValue <- reps_all$MDL
     newDat$ActivityStartDate <- as.Date(newDat$ActivityStartDate, format = '%Y-%m-%d')
     # newDat$units
