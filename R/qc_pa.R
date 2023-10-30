@@ -78,7 +78,8 @@ qc_pa <- function(dat,
                       paste0('A-B variation exceeding both QC criteria (n = ', length(sensor_rejected), ')')),
            bty = 'n',
            pch = c(21, 21, 21, 21), pt.cex = 1.5,
-           pt.bg = c('black', 'orange2', 'red4', 'red1')
+           pt.bg = c('black', 'orange2', 'red4', 'red1'),
+           y.intersp=1
            )
     # }
   }
