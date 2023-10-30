@@ -8,8 +8,10 @@ qc_pa(
   dat,
   sensor_agreement_pct = 0.8,
   sensor_agreement_ug = 5,
-  column_name = "pm2.5_atm_",
-  sensor_name = "sensor_index"
+  column_name = "pm2_5_atm",
+  sensor_names = c("", "_b"),
+  device_name = "mac_address",
+  date_column = "UTCDateTime"
 )
 }
 \arguments{
@@ -21,7 +23,11 @@ qc_pa(
 
 \item{column_name}{name of the column with data of interest.}
 
-\item{sensor_name}{name of column with sensor IDs}
+\item{sensor_names}{defines how sensors are labeled in column names (there should be one column per sensor). These values are appended to `column_name` to identify the columns with data.}
+
+\item{device_name}{name of column with device IDs}
+
+\item{date_column}{name of column with time stamps}
 }
 \value{
 dataframe with a data-flag column (e.g., 'pm2.5_atm_flag') and a column (e.g., 'pm2.5_atm_qc') that only includes data meeting the sensor agreement threshold.
