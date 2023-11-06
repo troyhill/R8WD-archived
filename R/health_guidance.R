@@ -8,6 +8,7 @@
 #'   \item health_effects_statement statement of health effects guidance for each category, based on https://www.airnow.gov/aqi/aqi-calculator-concentration/ and 40 CFR 58
 #'   \item cautionary_statement additional cautionary statement for each category
 #'   \item fill_color Air Quality Index color associated with each category
+#'   \item levels_of_concern concise description of concern level, as appearing in https://www.airnow.gov/aqi/aqi-basics/
 #'}
 #' @docType data
 #' @keywords aqi
