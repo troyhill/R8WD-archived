@@ -1,10 +1,10 @@
 Package: R8WD
 Type: Package
-Title: Analysis and reporting on EPA Water Quality Portal data
+Title: Water quality reporting tools used by Region 8
 Version: 0.1.1
 Author: Troy D. Hill and Ethan Yu
 Maintainer: Troy D. Hill <Hill.TroyD@epa.gov>
-Description: Reporting and data visualization tools for Water Quality Portal data.
+Description: Water quality reporting and data visualization tools used by Region 8.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
